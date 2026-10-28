@@ -65,3 +65,9 @@ test("loadMeals and saveMeals do not throw when storage access fails", () => {
   assert.equal(loadMeals(broken).ok, false);
   assert.equal(saveMeals([meal], broken).ok, false);
 });
+
+test("validateMeal enforces the documented text length limits", () => {
+  assert.equal(validateMeal({ ...meal, food: "x".repeat(121) }).valid, false);
+  assert.equal(validateMeal({ ...meal, drink: "x".repeat(81) }).valid, false);
+  assert.equal(validateMeal({ ...meal, notes: "x".repeat(401) }).valid, false);
+});
