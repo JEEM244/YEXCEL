@@ -1,6 +1,6 @@
 # YEXCEL
 
-Prototipo web para registrar comidas por fecha, consultar un historial y exportar datos compatibles con Excel.
+Prototipo web YEXCEL 0.3.0 para registrar comidas por fecha, consultar un historial, editar datos y exportar CSV o respaldo JSON.
 
 ## Estructura del proyecto
 
@@ -43,6 +43,6 @@ La carpeta `docs/` reúne arquitectura, privacidad, modelo de datos, preguntas a
 
 ## Importante
 
-Los datos se guardan en el navegador actual. No hay cuentas, sincronización ni respaldo automático. Borrar datos del sitio puede hacer que se pierdan registros. Los encabezados de exportación todavía son provisionales: deben ajustarse a la plantilla exacta que entregue el cliente.
+Los datos se guardan en el almacenamiento local del navegador actual. No hay cuentas, sincronización ni respaldo automático. Borrar datos del sitio puede hacer que se pierdan registros. Los encabezados de exportación todavía son provisionales: deben ajustarse a la plantilla exacta que entregue el cliente.
 
 Consulta la carpeta `docs/` para arquitectura, privacidad, modelo de datos, pruebas y limitaciones conocidas.
