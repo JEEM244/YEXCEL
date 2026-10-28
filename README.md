@@ -29,11 +29,11 @@ npm run check
 
 ## Funciones del prototipo
 
-- Registro de comidas por fecha.
-- Calendario, historial, búsqueda y filtros.
-- Almacenamiento en el navegador.
-- Exportación CSV compatible con Excel.
-- Respaldo JSON versionado en la nueva capa de exportación (la integración visual está en progreso).
+- Registro, edición y eliminación de comidas por fecha.
+- Calendario, historial, búsqueda y filtros por rango de fechas.
+- Almacenamiento local con intento de migración desde la versión anterior.
+- Exportación CSV compatible con Excel y neutralización básica de fórmulas en celdas.
+- Descarga y restauración de respaldo JSON versionado, con validación y confirmación.
 
 ## Pruebas y documentación
 
@@ -45,4 +45,4 @@ La carpeta `docs/` reúne arquitectura, privacidad, modelo de datos, preguntas a
 
 Los datos se guardan en el almacenamiento local del navegador actual. No hay cuentas, sincronización ni respaldo automático. Borrar datos del sitio puede hacer que se pierdan registros. Los encabezados de exportación todavía son provisionales: deben ajustarse a la plantilla exacta que entregue el cliente.
 
-Consulta la carpeta `docs/` para arquitectura, privacidad, modelo de datos, pruebas y limitaciones conocidas.
+Consulta `CHANGELOG.md` para este hito y `docs/MANUAL-QA.md` para las pruebas manuales pendientes.
