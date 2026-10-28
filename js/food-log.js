@@ -302,24 +302,46 @@ const viewCopy = {
   records: { title: "Historial de registros", subtitle: "Busca, revisa y corrige registros guardados en este dispositivo." },
   export: { title: "Exportar a Excel", subtitle: "Genera el archivo organizado para continuar el trabajo en Excel." }
 };
-function showView(view) {
-  if (!viewCopy[view]) return;
-  ["registro", "records", "export"].forEach(id => {
+function showView(view, { updateAddress = true, scrollTop = true } = {}) {
+  if (!viewCopy[view]) view = "registro";
+
+  // Cada opción del menú muestra una sola pantalla funcional.
+  const screenIds = ["registro", "records", "export"];
+  screenIds.forEach(id => {
     const section = document.getElementById(id);
-    if (section) section.hidden = id !== view;
+    if (section) {
+      section.hidden = id !== view;
+      section.setAttribute("aria-hidden", id === view ? "false" : "true");
+    }
   });
+
   document.querySelectorAll(".nav-link[data-view]").forEach(button => {
     const active = button.dataset.view === view;
     button.classList.toggle("active", active);
-    button.setAttribute("aria-current", active ? "page" : "false");
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
   });
+
   $("#pageTitle").textContent = viewCopy[view].title;
   $(".topbar .subtitle").textContent = viewCopy[view].subtitle;
   $(".stats").hidden = view !== "registro";
   $("#addNew").hidden = view !== "registro";
-  history.replaceState(null, "", "#" + view);
+
+  // La navegación cambia la vista y la dirección; no desplaza a una sección larga.
+  if (updateAddress && location.hash !== "#" + view) {
+    history.pushState({ view }, "", "#" + view);
+  }
+  if (scrollTop) window.scrollTo({ top: 0, behavior: "auto" });
 }
-document.querySelectorAll(".nav-link[data-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
+
+document.querySelectorAll(".nav-link[data-view]").forEach(button => {
+  button.addEventListener("click", event => {
+    event.preventDefault();
+    showView(button.dataset.view);
+  });
+});
+window.addEventListener("popstate", () => showView(location.hash.slice(1), { updateAddress: false }));
+window.addEventListener("hashchange", () => showView(location.hash.slice(1), { updateAddress: false }));
 $("#addNew").addEventListener("click", () => {
   clearForm();
   showView("registro");
@@ -328,5 +350,5 @@ $("#addNew").addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 const initialView = location.hash.slice(1);
-showView(viewCopy[initialView] ? initialView : "registro");
+showView(viewCopy[initialView] ? initialView : "registro", { updateAddress: false, scrollTop: false });
 
