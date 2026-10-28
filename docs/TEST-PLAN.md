@@ -11,6 +11,9 @@
 - Recuento de días únicos y registros mensuales.
 
 ## Pruebas manuales
+- Restaurar un respaldo JSON versionado y cancelar la operación de confirmación.
+- Comprobar que un rango de fechas invertido se marca como inválido.
+- Editar un registro existente y comprobar que conserva su identificador.
 - Agregar, editar y eliminar comidas.
 - Navegar meses y seleccionar fechas.
 - Buscar por nombre, nota y fecha.
