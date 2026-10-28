@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#111827">
   <meta name="description" content="Captura registros diarios de alimentos y genera el concentrado organizado para Excel.">
   <link rel="icon" type="image/svg+xml" href="assets/yexcel-mark.svg">
-  <link rel="stylesheet" href="css/food-log.css?v=pdf-drop-1">
+  <link rel="stylesheet" href="css/food-log.css?v=pdf-pick-2">
   <title>YEXCEL — Registro de alimentos</title>
 </head>
 <body>
@@ -86,6 +86,22 @@
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="js/food-log.js?v=pdf-pick-2"></script>
+  <script>
+  window.addEventListener("error", function (event) {
+    const status = document.getElementById("pdfImportStatus");
+    if (status && event.filename && /food-log\.js|pdf-import\.js/.test(event.filename)) {
+      status.textContent = "Error al cargar el módulo de importación. Actualiza la página y vuelve a intentarlo.";
+      status.classList.add("error");
+    }
+  }, true);
+  window.addEventListener("unhandledrejection", function (event) {
+    const status = document.getElementById("pdfImportStatus");
+    if (status) {
+      status.textContent = "Falló una operación al importar el PDF. Revisa la conexión e inténtalo de nuevo.";
+      status.classList.add("error");
+    }
+  });
+</script>
+<script type="module" src="js/food-log.js?v=pdf-pick-3"></script>
 </body>
 </html>
