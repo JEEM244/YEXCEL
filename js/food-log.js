@@ -96,7 +96,7 @@ function lineMarkup(item = {}) {
   const unit = item.unit || "";
   const unrecognized = item.recognitionStatus === "unrecognized";
   return `<div class="line-row paper-row ${unrecognized ? "needs-review" : ""}" ${unrecognized ? 'data-recognition-status="unrecognized"' : ""}>
-    <div class="line-description" title="${escapeHTML(description)}">${escapeHTML(description)}</div>
+    <div class="line-description" title="${escapeHTML(description)}">${escapeHTML(description)}${unrecognized ? '<small class="recognition-warning">No se reconoció el número</small>' : ""}</div>
     <label class="quantity-cell"><span class="mobile-only">Cantidad</span><input class="line-quantity" type="number" min="0" max="100000000" step="any" value="${item.quantity ?? ""}" placeholder="${unrecognized ? "No se reconoció el número" : "—"}" aria-label="Cantidad de ${escapeHTML(description || "insumo")}" ${unrecognized ? 'title="El OCR detectó el insumo, pero no pudo leer la cantidad"' : ""}></label>
     <div class="line-unit" aria-label="Unidad de medida">${escapeHTML(unit || "—")}</div>
   </div>`;
