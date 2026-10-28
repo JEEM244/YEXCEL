@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  localISODate, parseISODate, formatDateEs, escapeHTML, csvCell,
+  localISODate, parseISODate, formatDateEs, formatMonthEs, escapeHTML, csvCell,
   uniqueDateCount, sortMealsNewestFirst, createId
 } from "../js/utils.js";
 
@@ -43,4 +43,14 @@ test("sortMealsNewestFirst no muta el arreglo original", () => {
 
 test("createId genera valores no vacíos", () => {
   assert.ok(createId().length > 5);
+});
+
+test("formatMonthEs uses a stable Spanish label", () => {
+  assert.equal(formatMonthEs(new Date(2026, 9, 1)), "Octubre 2026");
+});
+
+test("parseISODate rejects empty input and non-string values", () => {
+  assert.equal(parseISODate(""), null);
+  assert.equal(parseISODate(null), null);
+  assert.equal(parseISODate("2026-13-01"), null);
 });
