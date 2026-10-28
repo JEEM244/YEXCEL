@@ -173,6 +173,9 @@ function wireRecordButtons(root) {
     selectedDate = button.dataset.date || selectedDate;
     const date = parseISODate(selectedDate);
     if (date) cursor = new Date(date.getFullYear(), date.getMonth(), 1);
+    calendar();
+    $("#selectedLabel").textContent = formatDateEs(selectedDate);
+    $("#selectedCount").textContent = listForDate(selectedDate).length + " registros";
     openForm();
   }));
   root.querySelectorAll(".edit").forEach((button) => button.addEventListener("click", () => openForm(button.dataset.id)));
