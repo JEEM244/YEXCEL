@@ -31,25 +31,23 @@
 .export-panel>p{max-width:780px}
 @media(max-width:720px){.topbar{padding:19px;border-radius:13px}.nav-link{width:auto;flex:1 1 auto;justify-content:center}.sidebar nav{display:flex}.sidebar{gap:12px}.stat-card:after{width:54px;height:54px;right:-16px;top:-14px}}
 
-/* Captura que replica las tablas impresas del formato físico */
+/* Captura con la misma estructura de la hoja física: INSUMO | CANTIDAD | UNIDAD. */
 .paper-table{border:1px solid #9aa7b1;border-radius:3px;overflow:hidden;background:#fff}
 .paper-table .group-heading{background:#eaf0f4;border-bottom:1px solid #aab6bf;padding:9px 12px}
 .paper-table .group-heading h3{font-size:12px;text-transform:uppercase;letter-spacing:.45px;color:#243b4c}
-.paper-columns{display:grid;grid-template-columns:minmax(0,1fr) 92px 104px 34px;background:#f7f8f9;border-bottom:1px solid #9aa7b1;font-size:10px;font-weight:800;color:#344653}
+.paper-columns{display:grid;grid-template-columns:minmax(0,1fr) 92px 104px;background:#f7f8f9;border-bottom:1px solid #9aa7b1;font-size:10px;font-weight:800;color:#344653}
 .paper-columns span{padding:7px 9px;border-right:1px solid #c4ccd2}
 .paper-columns span:last-child{border-right:0}
 .paper-table .line-list{padding:0;gap:0}
-.paper-row{grid-template-columns:minmax(0,1fr) 92px 104px 34px;gap:0;align-items:stretch;min-height:37px;border-bottom:1px solid #cbd2d7}
+.paper-row{display:grid;grid-template-columns:minmax(0,1fr) 92px 104px;gap:0;align-items:stretch;min-height:37px;border-bottom:1px solid #cbd2d7}
 .paper-row:last-child{border-bottom:0}
-.paper-row label{display:block;min-width:0}
-.paper-row label span{display:none}
-.paper-row input{height:100%;min-height:37px;border:0;border-radius:0;padding:7px 9px;background:#fff;font-size:12px;box-shadow:none!important}
-.paper-row label+label{border-left:1px solid #cbd2d7}
-.paper-row .line-description{font-weight:600}
-.paper-row .line-quantity{text-align:center;font-weight:700;color:#1d5279}
-.paper-row .line-unit{text-align:center;text-transform:uppercase;color:#52606a;font-size:11px}
-.paper-row input:focus{background:#f0f8ff;border:1px solid #4785b1;outline:1px solid #4785b1;position:relative;z-index:1}
-.paper-row .remove-line{height:auto;border:0;border-left:1px solid #cbd2d7;border-radius:0;font-size:16px;background:#fff}
+.paper-row>*{min-width:0;border-right:1px solid #cbd2d7}
+.paper-row>*:last-child{border-right:0}
+.paper-row .line-description{display:flex;align-items:center;padding:7px 9px;font-size:12px;font-weight:600;overflow-wrap:anywhere}
+.paper-row .quantity-cell{display:block}
+.paper-row .quantity-cell .line-quantity{display:block;width:100%;height:100%;min-height:37px;border:0;border-radius:0;padding:7px 5px;background:#f9fcff;font-size:12px;text-align:center;font-weight:700;color:#1d5279;box-shadow:none!important}
+.paper-row .line-unit{display:flex;align-items:center;justify-content:center;padding:7px 5px;font-size:11px;text-transform:uppercase;color:#52606a;background:#fff}
+.paper-row .line-quantity:focus{background:#f0f8ff;border:1px solid #4785b1;outline:1px solid #4785b1;position:relative;z-index:1}
 .mobile-only{display:none}
 @media(min-width:1000px){.item-groups{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.paper-table[data-category="abarrotes"]{grid-row:span 2}}
-@media(max-width:600px){.paper-columns{grid-template-columns:minmax(0,1fr) 62px 74px 30px}.paper-row{grid-template-columns:minmax(0,1fr) 62px 74px 30px}.paper-row input{padding:7px 5px;font-size:11px}.paper-row .line-unit{font-size:10px}.paper-row .remove-line{font-size:13px}}
+@media(max-width:600px){.paper-columns{grid-template-columns:minmax(0,1fr) 62px 74px}.paper-columns span{padding:7px 5px}.paper-row{grid-template-columns:minmax(0,1fr) 62px 74px}.paper-row .line-description{padding:7px 5px;font-size:11px}.paper-row .quantity-cell .line-quantity{padding:7px 3px;font-size:11px}.paper-row .line-unit{font-size:10px}}
