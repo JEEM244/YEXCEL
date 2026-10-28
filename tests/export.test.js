@@ -7,7 +7,7 @@ const meals = [{ id: "abc", date: "2026-10-27", type: "Comida", food: "Arroz; po
 test("buildCsv includes BOM, Excel-friendly separator and escaped fields", () => {
   const csv = buildCsv(meals);
   assert.ok(csv.startsWith("\uFEFF"));
-  assert.ok(csv.includes("Fecha;Tipo de comida;Comida;Hora;Bebida;Notas"));
+  assert.ok(csv.includes('"Fecha";"Tipo de comida";"Comida";"Hora";"Bebida";"Notas"'));
   assert.ok(csv.includes('"Arroz; pollo"'));
   assert.ok(csv.includes('"dijo ""hola"""'));
 });
@@ -46,6 +46,6 @@ test("parseJsonBackup rejects invalid meal records", () => {
 test("buildCsv can create a header-only file for an empty list", () => {
   const csv = buildCsv([]);
   assert.ok(csv.startsWith("\uFEFF"));
-  assert.ok(csv.includes("Fecha;Tipo de comida;Comida;Hora;Bebida;Notas"));
+  assert.ok(csv.includes('"Fecha";"Tipo de comida";"Comida";"Hora";"Bebida";"Notas"'));
   assert.equal(csv.trim().split("\r\n").length, 1);
 });
