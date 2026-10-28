@@ -38,8 +38,8 @@
           <div class="form-section pdf-import-section">
             <h3>Captura automática desde PDF</h3>
             <p class="muted">Selecciona el formato PDF de registro de alimentos. YEXCEL extraerá los datos detectables para llenar el formulario; revisa la información antes de guardarla.</p>
-            <div class="pdf-import-controls"><label class="button secondary import-button" for="pdfFile">Seleccionar PDF</label><input id="pdfFile" class="visually-hidden" type="file" accept=".pdf,application/pdf"><span id="pdfFileName" class="small-note">Ningún archivo seleccionado</span><button id="parsePdf" class="button primary" type="button">Extraer y llenar datos</button></div>
-            <p id="pdfImportStatus" class="small-note" role="status" aria-live="polite">Funciona con PDF que contienen texto seleccionable; los PDF escaneados requieren OCR.</p>
+            <div id="pdfDropzone" class="pdf-dropzone" role="button" tabindex="0" aria-controls="pdfFile" aria-label="Seleccionar o arrastrar un archivo PDF"><input id="pdfFile" class="pdf-file-input" type="file" accept=".pdf,application/pdf"><span class="pdf-drop-icon" aria-hidden="true">⇧</span><strong>Arrastra aquí tu archivo PDF</strong><span>o toca para buscarlo en tu dispositivo</span><small id="pdfFileName">Todavía no has seleccionado un archivo</small></div>
+            <p id="pdfImportStatus" class="small-note" role="status" aria-live="polite">Al detectar un PDF, YEXCEL comenzará a extraer los datos automáticamente.</p>
           </div>
           <div class="form-section">
             <h3>Datos generales</h3>
