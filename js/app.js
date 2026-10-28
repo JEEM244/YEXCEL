@@ -244,12 +244,16 @@ function renderHistory() {
   const type = $("#filter").value;
   const from = $("#fromDate")?.value || "";
   const to = $("#toDate")?.value || "";
+  const invalidRange = Boolean(from && to && from > to);
+  $("#fromDate")?.setAttribute("aria-invalid", String(invalidRange));
+  $("#toDate")?.setAttribute("aria-invalid", String(invalidRange));
   const filtered = sortMealsNewestFirst(meals).filter((meal) => {
+    if (invalidRange) return false;
     const searchable = [meal.food, meal.notes, meal.drink, meal.type, meal.date].join(" ").toLocaleLowerCase("es-MX");
     return (!query || searchable.includes(query)) &&
       (!type || meal.type === type) && (!from || meal.date >= from) && (!to || meal.date <= to);
   });
-  $("#historyCount").textContent = filtered.length + " registros";
+  $("#historyCount").textContent = invalidRange ? "Rango de fechas inválido" : filtered.length + " registros";
   renderList($("#historyRecords"), filtered);
 }
 
