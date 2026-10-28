@@ -98,7 +98,7 @@ function worksheetXml(options) {
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
     '<dimension ref="A1:' + lastCell + '"/>' + views +
     '<sheetFormatPr defaultRowHeight="19"/><cols>' + cols + '</cols>' +
-    '<sheetData>' + rowXml + '</sheetData>' + mergeBlock + filter +
+    '<sheetData>' + rowXml + '</sheetData>' + filter + mergeBlock +
     '<pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>' +
     '<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>' +
     '</worksheet>';
