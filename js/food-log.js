@@ -357,8 +357,10 @@ async function importSelectedPdf(file) {
       return;
     }
     clearForm();
+    const reviewCount = importedLogs.reduce((sum, log) => sum + (log.unrecognizedItems?.length || 0), 0);
+    const reviewMessage = reviewCount ? ` Hay ${reviewCount} cantidad(es) por revisar; abre Editar en cada registro y busca los campos amarillos con el aviso “No se reconoció el número”.` : " No se detectaron cantidades pendientes de revisión en los nombres de insumos reconocidos.";
     const skipped = result.skippedPages ? ` Se omitieron ${result.skippedPages} página(s) sin datos detectables.` : "";
-    $("#pdfImportStatus").textContent = `Importación terminada${result.usedOCR ? " mediante OCR" : ""}: ${importedLogs.length} registro(s) creado(s) de ${result.pageCount} página(s). Cada página se guardó como un registro independiente. Revisa el historial y corrige los datos que el OCR no haya reconocido.${skipped}`;
+    $("#pdfImportStatus").textContent = `Importación terminada${result.usedOCR ? " mediante OCR" : ""}: ${importedLogs.length} registro(s) creado(s) de ${result.pageCount} página(s). Cada página se guardó como un registro independiente.${reviewMessage}${skipped}`;
     notify(`PDF importado: ${importedLogs.length} registro(s) creado(s).`);
     showView("records");
   } catch (error) {
