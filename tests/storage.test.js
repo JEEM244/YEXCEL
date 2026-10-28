@@ -39,6 +39,8 @@ test("loadMeals migrates legacy key to in-memory records", () => {
   assert.equal(result.ok, true);
   assert.equal(result.meals[0].food, "Arroz");
   assert.equal(result.migrated, true);
+  assert.ok(storage.values.has(STORAGE_KEY));
+  assert.ok(storage.values.has(LEGACY_STORAGE_KEY));
 });
 test("loadMeals handles corrupt stored JSON without throwing", () => {
   const result = loadMeals(fakeStorage({ [STORAGE_KEY]: "{" }));
@@ -46,4 +48,11 @@ test("loadMeals handles corrupt stored JSON without throwing", () => {
 });
 test("saveMeals reports unavailable or failing storage", () => {
   assert.equal(saveMeals([meal], { setItem() { throw new Error("quota"); } }).ok, false);
+});
+
+test("normalizeMeals rejects data above the configured record limit", () => {
+  const tooMany = Array.from({ length: 10001 }, (_, index) => ({ ...meal, id: "m" + index }));
+  const result = normalizeMeals(tooMany);
+  assert.equal(result.valid, false);
+  assert.match(result.error, /10000/);
 });
