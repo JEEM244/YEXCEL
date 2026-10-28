@@ -92,7 +92,8 @@ function closeForm() {
   $("#modalback").classList.remove("open");
   $("#modalback").setAttribute("aria-hidden", "true");
   editingId = null;
-  if (returnFocus && typeof returnFocus.focus === "function") returnFocus.focus();
+  if (returnFocus?.isConnected && typeof returnFocus.focus === "function") returnFocus.focus();
+  else $("#openForm")?.focus();
 }
 
 $("#addMain").addEventListener("click", () => openForm());
