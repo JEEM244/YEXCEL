@@ -1,3 +1,4 @@
+import { buildFoodLogXlsx } from "./xlsx-export.js";
 const KEY = "yexcelFoodLogsV1";
 const CATEGORIES = [
   { id: "desayuno", label: "Desayuno" },
@@ -49,11 +50,24 @@ function notify(message, error = false) {
   toastTimer = setTimeout(() => node.classList.remove("show"), 3500);
 }
 const CATALOG = [
-  {id:"desayuno",label:"Desayuno",items:[["Yogurth","LITROS"],["Papaya","PIEZAS"]]},
-  {id:"fruta",label:"Fruta y verdura",items:[["Pimiento morrón","KG"],["Cebolla","KG"],["Tomate","KG"]]},
-  {id:"abarrotes",label:"Abarrotes y desechables",items:[["Aceite","LITRO"],["Arroz","KG"],["Tenedor","PQT"],["Cuchara","PQT"],["Servilletas","PIEZAS"]]},
-  {id:"carnes",label:"Carnes y carnes frías",items:[["Filete de pescado","PIEZAS"],["Mantequilla","KG"]]},
-  {id:"condimentos",label:"Condimentos",items:[["Garbanzo","KG"],["Frijol","KG"],["Lentejas","KG"],["Pimienta","KG"],["Comino","KG"],["Ajo","KG"],["Sal","KG"],["Jamaica","KG"]]}
+  {id:"desayuno",label:"Desayuno",items:[["Yogurth","LITROS"],["Papaya","PIEZAS"],["Granola","KG"]]},
+  {id:"fruta",label:"Fruta y verdura",items:[
+    ["Pimiento morrón","KG"],["Cebolla","KG"],["Tomate","KG"],["Apio","KG"],["Limón","KG"],["Cilantro","MN"],
+    ["Nopal","KG"],["Queso panela","KG"],["Chile poblano","KG"]
+  ]},
+  {id:"abarrotes",label:"Abarrotes y desechables",items:[
+    ["Aceite","LITRO"],["Arroz","KG"],["Tenedor","PQTE"],["Cuchara","PQTE"],["Servilletas","PIEZAS"],
+    ["Achiote","KG"],["Jugo de naranja","LITRO"],["Elote","LATAS"],["Tortillas","KG"],
+    ["Consomé","SOBRE"],["Papel aluminio","ROLLO"],["Clight","SOBRES"]
+  ]},
+  {id:"carnes",label:"Carnes y carnes frías",items:[
+    ["Filete de pescado","PIEZAS"],["Pierna y muslo","KG"],["Pechuga de pollo","KG"],
+    ["Carne molida","KG"],["Mantequilla","KG"],["Margarina","PIEZAS"]
+  ]},
+  {id:"condimentos",label:"Condimentos y granos",items:[
+    ["Garbanzo","KG"],["Frijol","KG"],["Lentejas","KG"],["Pimienta","KG"],
+    ["Comino","KG"],["Ajo","KG"],["Sal","KG"],["Jamaica","KG"]
+  ]}
 ];
 CATEGORIES.splice(0,CATEGORIES.length,...CATALOG.map(({id,label})=>({id,label})));
 function categoryMarkup(category, items = []) {
@@ -216,59 +230,27 @@ $("#recordsList").addEventListener("click", event => {
 $("#search").addEventListener("input", render);
 $("#monthFilter").addEventListener("change", render);
 
-function xmlEscape(value) {
-  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
-}
-function cell(value, numeric = false) {
-  if (value === "" || value === null || value === undefined) return "<Cell><Data ss:Type=\"String\"></Data></Cell>";
-  const type = numeric && Number.isFinite(Number(value)) ? "Number" : "String";
-  return `<Cell><Data ss:Type="${type}">${xmlEscape(value)}</Data></Cell>`;
-}
-function row(values) { return `<Row>${values.map(value => Array.isArray(value) ? cell(value[0], value[1]) : cell(value)).join("")}</Row>`; }
-function worksheet(name, rows) {
-  return `<Worksheet ss:Name="${xmlEscape(name)}"><Table>${rows.join("")}</Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><PageSetup><Layout x:Orientation="Landscape"/></PageSetup><FitToPage/><Print><ValidPrinterInfo/><PaperSizeIndex>9</PaperSizeIndex><Scale>75</Scale></Print></WorksheetOptions></Worksheet>`;
-}
-function buildExcel() {
-  const sorted = [...logs].sort((a,b) => a.date.localeCompare(b.date));
-  const dailyRows = [row(["Fecha","Centro","Encargado de cocina","Desayunos otorgados","Comidas otorgadas","Menú","Agua","Fruta","Categoría","Descripción","Cantidad","Unidad"])];
-  sorted.forEach(log => {
-    if (!log.items.length) {
-      dailyRows.push(row([log.date,log.center,log.cook,[log.breakfasts,true],[log.mealsServed,true],log.menu,log.water,log.fruit,"","","",""]));
-    } else {
-      log.items.forEach(item => dailyRows.push(row([log.date,log.center,log.cook,[log.breakfasts,true],[log.mealsServed,true],log.menu,log.water,log.fruit,CATEGORIES.find(c => c.id === item.category)?.label || item.category,item.description,[item.quantity,true],item.unit])));
-    }
-  });
-  const month = $("#monthFilter").value || todayISO().slice(0,7);
-  const monthLogs = sorted.filter(log => log.date.startsWith(month));
-  const dates = [...new Set(monthLogs.map(log => log.date))].sort();
-  const summaryRows = [row(["Categoría","Descripción","Unidad",...dates,"TOTAL"])];
-  const itemsByKey = new Map();
-  monthLogs.forEach(log => log.items.forEach(item => {
-    const key = [item.category,item.description,item.unit].join("\u0000");
-    if (!itemsByKey.has(key)) itemsByKey.set(key,{ category:item.category, description:item.description, unit:item.unit, amounts:{} });
-    const target = itemsByKey.get(key);
-    const current = Number(target.amounts[log.date] || 0);
-    target.amounts[log.date] = current + (Number(item.quantity) || 0);
-  }));
-  [...itemsByKey.values()].sort((a,b) => a.category.localeCompare(b.category) || a.description.localeCompare(b.description,"es-MX")).forEach(item => {
-    const total = dates.reduce((sum,date) => sum + Number(item.amounts[date] || 0),0);
-    summaryRows.push(row([CATEGORIES.find(c => c.id === item.category)?.label || item.category,item.description,item.unit,...dates.map(date => [item.amounts[date] ?? "", true]),[total,true]]));
-  });
-  const book = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">${worksheet("Registros diarios",dailyRows)}${worksheet("Concentrado",summaryRows)}</Workbook>`;
-  return book;
-}
 $("#exportExcel").addEventListener("click", () => {
   if (!logs.length) return notify("Todavía no hay registros para exportar.", true);
   try {
-    const blob = new Blob(["\uFEFF",buildExcel()], { type:"application/vnd.ms-excel;charset=utf-8" });
+    const month = $("#monthFilter").value || todayISO().slice(0, 7);
+    const workbookBytes = buildFoodLogXlsx(logs, month, CATALOG);
+    const blob = new Blob([workbookBytes], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `YEXCEL-registro-alimentos-${$("#monthFilter").value || todayISO().slice(0,7)}.xls`;
-    document.body.append(a); a.click(); a.remove();
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "YEXCEL-registro-alimentos-" + month + ".xlsx";
+    document.body.append(link);
+    link.click();
+    link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1500);
-    notify("Archivo de Excel generado con las hojas Registro diario y Concentrado.");
-  } catch { notify("No se pudo generar el archivo de Excel.", true); }
+    notify("Archivo .xlsx generado: concentrado mensual y registros diarios.");
+  } catch (error) {
+    console.error("YEXCEL export error:", error);
+    notify(error?.message || "No se pudo generar el archivo de Excel.", true);
+  }
 });
 $("#exportBackup").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify({format:"yexcel-food-logs",version:1,exportedAt:new Date().toISOString(),logs},null,2)],{type:"application/json;charset=utf-8"});
