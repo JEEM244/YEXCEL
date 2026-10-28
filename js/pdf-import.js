@@ -1,5 +1,5 @@
 const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs";
-const TESSERACT_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js";
+const TESSERACT_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
 
 const cleanText = value => String(value ?? "")
   .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -99,11 +99,32 @@ async function extractPdfText(pdf, pdfjs, onProgress) {
 
   // Scanned PDFs have no selectable text. Render each page and use Spanish OCR.
   onProgress?.("El PDF es un escaneo. Activando reconocimiento de texto (OCR en español)…");
-  let tesseract;
-  try {
-    tesseract = await import(TESSERACT_URL);
-  } catch (error) {
-    throw new Error("No se pudo cargar el motor OCR. Revisa tu conexión a internet y vuelve a intentarlo.");
+  let tesseract = window.Tesseract;
+  if (typeof tesseract?.createWorker !== "function") {
+    try {
+      await new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[data-yexcel-tesseract="true"]');
+        if (existing) {
+          existing.addEventListener("load", resolve, { once: true });
+          existing.addEventListener("error", () => reject(new Error("script load failed")), { once: true });
+          if (window.Tesseract?.createWorker) resolve();
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = TESSERACT_URL;
+        script.async = true;
+        script.dataset.yexcelTesseract = "true";
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("script load failed"));
+        document.head.appendChild(script);
+      });
+      tesseract = window.Tesseract;
+    } catch {
+      throw new Error("No se pudo cargar el motor OCR. Revisa tu conexión a internet y vuelve a intentarlo.");
+    }
+  }
+  if (typeof tesseract?.createWorker !== "function") {
+    throw new Error("Se cargó el OCR, pero no se encontró su función de reconocimiento. Actualiza la página e inténtalo de nuevo.");
   }
   const worker = await tesseract.createWorker("spa", 1, {
     workerPath: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js",
