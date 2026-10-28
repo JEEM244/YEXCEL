@@ -82,4 +82,4 @@
 .pdf-dropzone strong{font-size:15px;color:#233b4c}
 .pdf-dropzone>span:not(.pdf-drop-icon){font-size:12px;color:#637586}
 .pdf-dropzone small{margin-top:5px;max-width:100%;overflow-wrap:anywhere;color:#1d5279;font-size:12px;font-weight:700}
-.pdf-file-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.pdf-file-input{position:relative;inset:auto;display:block;width:min(100%,520px);height:auto;opacity:1;cursor:pointer;padding:10px;border:1px solid #cbd7df;border-radius:8px;background:#f7fbfd;color:#344454;font-size:13px;z-index:1}
