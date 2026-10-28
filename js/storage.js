@@ -48,28 +48,46 @@ export function normalizeMeals(value) {
   return { valid: true, meals, error: "" };
 }
 
-export function loadMeals(storage = globalThis.localStorage) {
+export function loadMeals(storage) {
   try {
-    let raw = storage?.getItem(STORAGE_KEY);
+    const target = storage ?? globalThis.localStorage;
+    if (!target) throw new Error("Storage is unavailable");
+    let raw = target.getItem(STORAGE_KEY);
+    let usedLegacy = false;
     if (raw == null) {
-      const legacy = storage?.getItem(LEGACY_STORAGE_KEY);
-      if (legacy == null) return { ok: true, meals: [], migrated: false };
-      raw = legacy;
+      raw = target.getItem(LEGACY_STORAGE_KEY);
+      usedLegacy = raw != null;
     }
+    if (raw == null) return { ok: true, meals: [], migrated: false };
     const normalized = normalizeMeals(JSON.parse(raw));
-    if (!normalized.valid) return { ok: false, meals: [], error: normalized.error, recovered: true };
-    return { ok: true, meals: normalized.meals, migrated: true };
+    if (!normalized.valid) {
+      return { ok: false, meals: [], error: normalized.error, recovered: true };
+    }
+    if (usedLegacy) {
+      try {
+        target.setItem(STORAGE_KEY, JSON.stringify(normalized.meals));
+      } catch {
+        return {
+          ok: true,
+          meals: normalized.meals,
+          migrated: false,
+          warning: "Se recuperaron los registros antiguos, pero no se pudo crear su copia nueva."
+        };
+      }
+    }
+    return { ok: true, meals: normalized.meals, migrated: usedLegacy };
   } catch {
     return { ok: false, meals: [], error: "No se pudieron leer los datos del navegador.", recovered: false };
   }
 }
 
-export function saveMeals(meals, storage = globalThis.localStorage) {
+export function saveMeals(meals, storage) {
   const normalized = normalizeMeals(meals);
   if (!normalized.valid) return { ok: false, error: normalized.error };
   try {
-    if (!storage) throw new Error("Storage is unavailable");
-    storage.setItem(STORAGE_KEY, JSON.stringify(normalized.meals));
+    const target = storage ?? globalThis.localStorage;
+    if (!target) throw new Error("Storage is unavailable");
+    target.setItem(STORAGE_KEY, JSON.stringify(normalized.meals));
     return { ok: true, meals: normalized.meals };
   } catch {
     return { ok: false, error: "El navegador no pudo guardar los datos. Exporta un respaldo y revisa el espacio disponible." };
