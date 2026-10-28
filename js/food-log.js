@@ -314,7 +314,7 @@ $("#parsePdf").addEventListener("click", async () => {
   $("#pdfImportStatus").textContent = "Leyendo el PDF y buscando los campos del registro…";
   $("#pdfImportStatus").classList.remove("error");
   try {
-    const result = await parseFoodLogPdf(file, CATALOG);
+    const result = await parseFoodLogPdf(file, CATALOG, message => {\n      $("#pdfImportStatus").textContent = message;\n    });
     const fields = result.fields;
     if (fields.date) $("#date").value = fields.date;
     if (fields.center) $("#center").value = fields.center;
@@ -338,7 +338,7 @@ $("#parsePdf").addEventListener("click", async () => {
       $("#pdfImportStatus").classList.add("error");
       return notify("No se detectaron datos reconocibles en el PDF.", true);
     }
-    $("#pdfImportStatus").textContent = `Extracción terminada: ${result.pageCount} página(s), ${filled} dato(s) detectado(s). Revisa los campos y guarda el registro cuando estén correctos.`;
+    $("#pdfImportStatus").textContent = `Extracción terminada${result.usedOCR ? " mediante OCR" : ""}: ${result.pageCount} página(s), ${filled} dato(s) detectado(s). Revisa los campos y cantidades antes de guardar.`;
     notify("Datos extraídos. Revísalos antes de guardar.");
   } catch (error) {
     console.error("YEXCEL PDF import error:", error);
