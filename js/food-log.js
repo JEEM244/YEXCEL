@@ -164,6 +164,26 @@ function editLog(id) {
   $("#saveLog").textContent = "Guardar cambios";
   $("#date").scrollIntoView({ behavior:"smooth", block:"center" });
 }
+function renderInventoryTotals() {
+  const totals = new Map();
+  logs.forEach(log => {
+    (Array.isArray(log.items) ? log.items : []).forEach(item => {
+      const description = String(item.description || '').trim();
+      const unit = String(item.unit || '').trim();
+      const quantity = item.quantity === '' || item.quantity == null ? NaN : Number(item.quantity);
+      if (!description || !Number.isFinite(quantity)) return;
+      const normalized = description.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLocaleLowerCase('es-MX');
+      const key = normalized + '|' + unit.toLocaleLowerCase('es-MX');
+      const current = totals.get(key) || { description, unit, quantity: 0 };
+      current.quantity += quantity;
+      totals.set(key, current);
+    });
+  });
+  const numberFormat = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 6 });
+  const rows = [...totals.values()].sort((a, b) => a.description.localeCompare(b.description, 'es-MX', { sensitivity: 'base' }) || a.unit.localeCompare(b.unit, 'es-MX', { sensitivity: 'base' }));
+  $('#inventoryCount').textContent = rows.length + ' insumo' + (rows.length === 1 ? '' : 's');
+  $('#inventoryTotalsBody').innerHTML = rows.length ? rows.map(item => '<tr><td>' + escapeHTML(item.description) + '</td><td>' + escapeHTML(item.unit || '—') + '</td><td class="inventory-quantity">' + numberFormat.format(item.quantity) + '</td></tr>').join('') : '<tr><td colspan="3">Todavía no hay cantidades registradas.</td></tr>';
+}
 function render() {
   const sorted = [...logs].sort((a,b) => b.date.localeCompare(a.date));
   $("#statDays").textContent = logs.length;
@@ -174,6 +194,7 @@ function render() {
   const month = $("#monthFilter").value;
   const filtered = sorted.filter(log => (!month || log.date.startsWith(month)) &&
     (!query || [log.date, log.center, log.cook, log.menu, ...log.items.map(i => i.description)].join(" ").toLocaleLowerCase("es-MX").includes(query)));
+  renderInventoryTotals();
   $("#recordsList").innerHTML = filtered.length ? filtered.map(log => `
     <article class="record-card">
       <div class="record-date"><span>${escapeHTML(dateLabel(log.date))}</span><strong>${escapeHTML(log.center || "Centro sin nombre")}</strong><small>${log.items.length} insumos · ${escapeHTML(log.cook || "Sin encargado")}</small></div>
