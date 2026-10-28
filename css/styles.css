@@ -76,3 +76,9 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   .muted, .record small, .gamebody p { color: #444 !important; }
   .tag { background: #eee !important; color: #111 !important; border-color: #bbb !important; }
 }
+
+/* Restrained feedback: small transitions, no flashing or large movement. */
+button, .nav button, .record, .game, .stat, .panel {
+  transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease;
+}
+button:active { transform: translateY(1px); }
