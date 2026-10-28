@@ -66,6 +66,14 @@
         <div class="section-heading"><div><p class="eyebrow">CONSULTA</p><h2>Historial de registros</h2></div><span id="recordsCount" class="count-tag">0 registros</span></div>
         <div class="filters"><label>Buscar<input id="search" type="search" placeholder="Centro, menú, encargado o insumo"></label><label>Mes para filtrar y concentrar<input id="monthFilter" type="month"></label></div>
         <div id="recordsList" class="records-list"></div>
+        <div class="inventory-totals">
+          <div class="section-heading"><div><p class="eyebrow">CONTEO ACUMULADO</p><h3>Totales de insumos</h3></div><span id="inventoryCount" class="count-tag">0 insumos</span></div>
+          <p class="small-note">Suma las cantidades de todos los registros guardados, agrupadas por insumo y unidad. Acepta cantidades decimales y no mezcla unidades diferentes.</p>
+          <div class="inventory-table-wrap"><table class="inventory-table">
+            <thead><tr><th>Insumo</th><th>Unidad</th><th>Total acumulado</th></tr></thead>
+            <tbody id="inventoryTotalsBody"><tr><td colspan="3">Todavía no hay cantidades registradas.</td></tr></tbody>
+          </table></div>
+        </div>
       </section>
 
       <section class="panel export-panel" id="export">
