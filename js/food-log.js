@@ -307,7 +307,7 @@ function showView(view) {
     const section = document.getElementById(id);
     if (section) section.hidden = id !== view;
   });
-  $(".nav-link[data-view]").forEach(button => {
+  document.querySelectorAll(".nav-link[data-view]").forEach(button => {
     const active = button.dataset.view === view;
     button.classList.toggle("active", active);
     button.setAttribute("aria-current", active ? "page" : "false");
@@ -318,7 +318,7 @@ function showView(view) {
   $("#addNew").hidden = view !== "registro";
   history.replaceState(null, "", "#" + view);
 }
-$(".nav-link[data-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
+document.querySelectorAll(".nav-link[data-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
 $("#addNew").addEventListener("click", () => {
   clearForm();
   showView("registro");
