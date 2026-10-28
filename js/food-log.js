@@ -53,32 +53,32 @@ const CATALOG = [
   {id:"fruta",label:"Fruta y verdura",items:[["Pimiento morrón","KG"],["Cebolla","KG"],["Tomate","KG"]]},
   {id:"abarrotes",label:"Abarrotes y desechables",items:[["Aceite","LITRO"],["Arroz","KG"],["Tenedor","PQT"],["Cuchara","PQT"],["Servilletas","PIEZAS"]]},
   {id:"carnes",label:"Carnes y carnes frías",items:[["Filete de pescado","PIEZAS"],["Mantequilla","KG"]]},
-  {id:"condimentos",label:"Condimentos",items:[["Garbanzo",""],["Frijol",""],["Lentejas",""],["Pimienta","KG"],["Comino","KG"],["Ajo","KG"],["Sal","KG"],["Jamaica","KG"]]}
+  {id:"condimentos",label:"Condimentos",items:[["Garbanzo","KG"],["Frijol","KG"],["Lentejas","KG"],["Pimienta","KG"],["Comino","KG"],["Ajo","KG"],["Sal","KG"],["Jamaica","KG"]]}
 ];
 CATEGORIES.splice(0,CATEGORIES.length,...CATALOG.map(({id,label})=>({id,label})));
 function categoryMarkup(category, items = []) {
   const defaults = CATALOG.find(c => c.id === category.id)?.items || [];
-  const saved = new Map(items.map(item => [item.description.toLocaleLowerCase("es-MX"), item]));
+  const saved = new Map(items.map(item => [String(item.description || "").toLocaleLowerCase("es-MX"), item]));
   const rows = defaults.map(([description,unit]) => ({
     category:category.id, description, unit,
     quantity:saved.get(description.toLocaleLowerCase("es-MX"))?.quantity ?? ""
   }));
-  items.filter(item => !defaults.some(([name]) => name.toLocaleLowerCase("es-MX") === item.description.toLocaleLowerCase("es-MX")))
+  // Conserva insumos antiguos si ya había registros con productos fuera del catálogo fijo.
+  items.filter(item => !defaults.some(([name]) => name.toLocaleLowerCase("es-MX") === String(item.description || "").toLocaleLowerCase("es-MX")))
     .forEach(item => rows.push(item));
-  if (!rows.length) rows.push({description:"",quantity:"",unit:""});
   return `<section class="item-group paper-table" data-category="${category.id}">
-    <div class="group-heading"><h3>${category.label}</h3><button class="button subtle add-line" type="button">+ Otro producto</button></div>
-    <div class="paper-columns"><span>DESCRIPCIÓN</span><span>CANT.</span><span>U.M.</span></div>
+    <div class="group-heading"><h3>${escapeHTML(category.label)}</h3></div>
+    <div class="paper-columns"><span>INSUMO</span><span>CANTIDAD</span><span>UNIDAD</span></div>
     <div class="line-list">${rows.map(lineMarkup).join("")}</div>
   </section>`;
 }
 function lineMarkup(item = {}) {
-  const catalogUnit = item.unit || "";
+  const description = item.description || "";
+  const unit = item.unit || "";
   return `<div class="line-row paper-row">
-    <label><span class="mobile-only">Descripción</span><input class="line-description" maxlength="100" value="${escapeHTML(item.description || "")}" placeholder="Nombre del insumo" aria-label="Descripción del insumo"></label>
-    <label><span class="mobile-only">Cantidad</span><input class="line-quantity" type="number" min="0" max="100000000" step="any" value="${item.quantity ?? ""}" placeholder="—" aria-label="Cantidad de ${escapeHTML(item.description || "insumo")}"></label>
-    <label><span class="mobile-only">Unidad de medida</span><input class="line-unit" maxlength="30" value="${escapeHTML(catalogUnit)}" placeholder="U.M." aria-label="Unidad de medida"></label>
-    <button class="remove-line" type="button" aria-label="Quitar insumo">×</button>
+    <div class="line-description" title="${escapeHTML(description)}">${escapeHTML(description)}</div>
+    <label class="quantity-cell"><span class="mobile-only">Cantidad</span><input class="line-quantity" type="number" min="0" max="100000000" step="any" value="${item.quantity ?? ""}" placeholder="—" aria-label="Cantidad de ${escapeHTML(description || "insumo")}"></label>
+    <div class="line-unit" aria-label="Unidad de medida">${escapeHTML(unit || "—")}</div>
   </div>`;
 }
 function clearForm() {
@@ -128,7 +128,6 @@ function validate(log) {
   for (const item of log.items) {
     if (!item.description) return "Completa la descripción de cada insumo que tenga cantidad o unidad.";
     if (item.quantity !== "" && (!Number.isFinite(item.quantity) || item.quantity < 0)) return "Las cantidades deben ser números iguales o mayores que cero.";
-    if (!item.unit) return `Indica la unidad del insumo: ${item.description}.`;
   }
   return "";
 }
