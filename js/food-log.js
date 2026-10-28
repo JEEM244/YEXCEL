@@ -1,5 +1,5 @@
 import { buildFoodLogXlsx } from "./xlsx-export.js";
-import { parseFoodLogPdf } from "./pdf-import.js?v=ocr-fix-7";
+import { parseFoodLogPdf } from "./pdf-import.js?v=ocr-fix-8";
 const KEY = "yexcelFoodLogsV1";
 const CATEGORIES = [
   { id: "desayuno", label: "Desayuno" },
