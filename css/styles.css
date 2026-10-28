@@ -54,3 +54,12 @@ button:disabled { cursor: not-allowed; opacity: .55; }
     transition-duration: 0.01ms !important;
   }
 }
+
+.datefilter input[aria-invalid="true"],
+.field input[aria-invalid="true"],
+.field select[aria-invalid="true"],
+.field textarea[aria-invalid="true"] {
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px #ff657733;
+}
+.clear-filters { min-height: 38px; white-space: nowrap; }
