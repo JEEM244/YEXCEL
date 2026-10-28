@@ -1,13 +1,32 @@
 const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs";
 
-const normalize = value => String(value ?? "")
+const cleanText = value => String(value ?? "")
   .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-  .toLocaleLowerCase("es-MX").replace(/\s+/g, " ").trim();
+  .replace(/[\t\u00a0]+/g, " ")
+  .replace(/ +/g, " ")
+  .trim();
+
+const normalize = value => cleanText(value).toLocaleLowerCase("es-MX");
 
 function extractLabeledValue(text, labels) {
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
   for (const label of labels) {
-    const re = new RegExp("(?:^|\\n)\\s*" + label + "\\s*[:：-]\\s*([^\\n]+)", "im");
-    const match = text.match(re);
+    const re = new RegExp("^\\s*" + label + "\\s*(?:[:：-]\\s*|\\s{2,})(.*)$", "i");
+    for (let i = 0; i < lines.length; i++) {
+      const match = lines[i].match(re);
+      if (match && match[1]?.trim()) return match[1].trim();
+      // Some PDFs place the value on the next visual line.
+      if (new RegExp("^\\s*" + label + "\\s*[:：-]?\\s*$", "i").test(lines[i]) && lines[i + 1]) {
+        const next = lines[i + 1];
+        if (!/^[A-ZÁÉÍÓÚÜÑ][A-ZÁÉÍÓÚÜÑ /]{2,}:?$/.test(next)) return next;
+      }
+    }
+  }
+  // Fallback for PDFs whose text layer puts several fields on one line.
+  const flat = cleanText(text);
+  for (const label of labels) {
+    const re = new RegExp("(?:^|\\s)" + label + "\\s*[:：-]\\s*(.{1,100}?)(?=\\s+[A-ZÁÉÍÓÚÜÑ][A-ZÁÉÍÓÚÜÑ /]{2,}\\s*[:：-]|$)", "i");
+    const match = flat.match(re);
     if (match?.[1]) return match[1].trim();
   }
   return "";
@@ -24,14 +43,41 @@ function findDate(text) {
   return "";
 }
 
+function parseQuantity(raw) {
+  if (!raw) return null;
+  // Supports decimals with comma or point and thousands separators.
+  let value = String(raw).trim().replace(/\s/g, "");
+  if (/^\d{1,3}(?:\.\d{3})+,\d+$/.test(value)) value = value.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(?:,\d{3})+\.\d+$/.test(value)) value = value.replace(/,/g, "");
+  else value = value.replace(",", ".");
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
 function getQuantityForItem(text, description) {
   const escaped = description.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(escaped + "[^\\d\\n]{0,35}?(\\d+(?:[.,]\\d+)?)|(?:^|\\n)\\s*(\\d+(?:[.,]\\d+)?)\\s*(?:kg|kgs|kilo|kilos|litros?|piezas?|paquetes?|pqte|sobres?|latas?|rollos?|mn)\\s+" + escaped, "i");
-  const match = text.match(re);
-  const raw = match?.[1] || match?.[2];
-  if (!raw) return null;
-  const value = Number(raw.replace(",", "."));
-  return Number.isFinite(value) && value >= 0 ? value : null;
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const itemLine = new RegExp(escaped, "i");
+  const unitPattern = "(?:kg|kgs|kilo(?:s)?|g|gr|gramos?|litros?|lts?|lt|piezas?|pz|paquetes?|pqte|sobres?|latas?|rollos?|mn)";
+  for (let i = 0; i < lines.length; i++) {
+    if (!itemLine.test(lines[i])) continue;
+    // Common layouts: "Arroz 1.5 KG", "1,5 kg Arroz", or "Arroz    1,5".
+    const after = lines[i].match(new RegExp(escaped + "[^\\d]{0,35}(\\d+(?:[.,]\\d+)?)\\s*(?:" + unitPattern + ")?", "i"));
+    const before = lines[i].match(new RegExp("(\\d+(?:[.,]\\d+)?)\\s*(?:" + unitPattern + ")\\s*" + escaped, "i"));
+    const quantity = parseQuantity(after?.[1] || before?.[1]);
+    if (quantity !== null) return quantity;
+    // Tables sometimes put the quantity in the next text-layer row.
+    if (lines[i + 1] && /^\d+(?:[.,]\d+)?$/.test(lines[i + 1])) {
+      const nextQuantity = parseQuantity(lines[i + 1]);
+      if (nextQuantity !== null) return nextQuantity;
+    }
+  }
+  // Search the full text only as a fallback; don't require newline characters
+  // after normalization, since PDF text layers frequently collapse whitespace.
+  const flat = cleanText(text);
+  const after = flat.match(new RegExp(escaped + "\\s{1,12}(\\d+(?:[.,]\\d+)?)\\s*(?:" + unitPattern + ")?", "i"));
+  const before = flat.match(new RegExp("(\\d+(?:[.,]\\d+)?)\\s*(?:" + unitPattern + ")\\s*" + escaped, "i"));
+  return parseQuantity(after?.[1] || before?.[1]);
 }
 
 export async function parseFoodLogPdf(file, catalog) {
@@ -60,6 +106,7 @@ export async function parseFoodLogPdf(file, catalog) {
   }
   const text = pages.join("\n");
   if (!text.trim()) throw new Error("No se encontró texto seleccionable. Si el PDF es un escaneo o una foto, necesita OCR antes de importarlo.");
+
   const date = findDate(text);
   const center = extractLabeledValue(text, ["centro(?: / casa club)?", "casa club", "nombre del centro"]);
   const cook = extractLabeledValue(text, ["encargado(?: de cocina)?", "responsable de cocina", "cocinero(?:a)?"]);
@@ -69,16 +116,15 @@ export async function parseFoodLogPdf(file, catalog) {
   const water = extractLabeledValue(text, ["agua", "bebida"]);
   const fruit = extractLabeledValue(text, ["fruta del d[ií]a", "fruta"]);
   const items = [];
-  const normalizedText = normalize(text);
   for (const category of catalog || []) {
     for (const [description, unit] of category.items || []) {
-      const quantity = getQuantityForItem(normalizedText, normalize(description));
+      const quantity = getQuantityForItem(text, description);
       if (quantity !== null) items.push({ category: category.id, description, unit, quantity });
     }
   }
   const numberOrBlank = value => {
-    const match = value.match(/\d+(?:[.,]\d+)?/);
-    return match ? Number(match[0].replace(",", ".")) : "";
+    const match = String(value).match(/\d+(?:[.,]\d+)?/);
+    return match ? parseQuantity(match[0]) : "";
   };
   return {
     fields: { date, center, cook, breakfasts: numberOrBlank(breakfasts), mealsServed: numberOrBlank(mealsServed), menu, water, fruit },
