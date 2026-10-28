@@ -42,3 +42,10 @@ test("parseJsonBackup rejects invalid meal records", () => {
   }));
   assert.equal(result.valid, false);
 });
+
+test("buildCsv can create a header-only file for an empty list", () => {
+  const csv = buildCsv([]);
+  assert.ok(csv.startsWith("\uFEFF"));
+  assert.ok(csv.includes("Fecha;Tipo de comida;Comida;Hora;Bebida;Notas"));
+  assert.equal(csv.trim().split("\r\n").length, 1);
+});
