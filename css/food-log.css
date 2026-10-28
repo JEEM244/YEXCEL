@@ -83,3 +83,10 @@
 .pdf-dropzone>span:not(.pdf-drop-icon){font-size:12px;color:#637586}
 .pdf-dropzone small{margin-top:5px;max-width:100%;overflow-wrap:anywhere;color:#1d5279;font-size:12px;font-weight:700}
 .pdf-file-input{position:relative;inset:auto;display:block;width:min(100%,520px);height:auto;opacity:1;cursor:pointer;padding:10px;border:1px solid #cbd7df;border-radius:8px;background:#f7fbfd;color:#344454;font-size:13px;z-index:1}
+
+/* Avisos para cantidades que el OCR no pudo leer */
+.paper-row.needs-review{background:#fff8e8}
+.paper-row.needs-review .line-description{flex-direction:column;align-items:flex-start;justify-content:center;gap:3px}
+.paper-row.needs-review .quantity-cell .line-quantity{background:#fff1c7;color:#854d0e;font-size:10px}
+.paper-row.needs-review .quantity-cell .line-quantity::placeholder{color:#854d0e;opacity:1;font-size:9px}
+.recognition-warning{display:block;color:#9a6700;font-size:9px;font-weight:700;line-height:1.2}
