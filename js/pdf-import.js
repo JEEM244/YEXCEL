@@ -208,10 +208,32 @@ export async function parseFoodLogPdf(file, catalog, onProgress) {
     const water = extractLabeledValue(text, ["agua", "bebida"]);
     const fruit = extractLabeledValue(text, ["fruta del d[ií]a", "fruta"]);
     const items = [];
+    const unrecognizedItems = [];
+    for (const category of catalog || []) {
+      for (const [description, unit] of category.items || []) {
+        const quantity = getQuantityForItem(text, description);
+        if (quantity !== null) {
+          items.push({ category: category.id, description, unit, quantity });
+        } else {
+          const escaped = description.replace(/[.*+?^${}()|[\]\\]/g, "\\    const items = [];
     for (const category of catalog || []) {
       for (const [description, unit] of category.items || []) {
         const quantity = getQuantityForItem(text, description);
         if (quantity !== null) items.push({ category: category.id, description, unit, quantity });
+      }
+    }
+    const fields = {");
+          const itemMentioned = new RegExp("(^|[^\\p{L}])" + escaped + "(?=$|[^\\p{L}])", "iu").test(text);
+          if (itemMentioned) {
+            unrecognizedItems.push({
+              category: category.id,
+              description,
+              unit,
+              quantity: "",
+              recognitionStatus: "unrecognized"
+            });
+          }
+        }
       }
     }
     const fields = {
@@ -221,7 +243,7 @@ export async function parseFoodLogPdf(file, catalog, onProgress) {
       menu, water, fruit
     };
     const fieldCount = Object.values(fields).filter(value => value !== "" && value != null).length;
-    return { pageNumber: index + 1, fields, items, hasData: fieldCount > 0 || items.length > 0 };
+    return { pageNumber: index + 1, fields, items, unrecognizedItems, hasData: fieldCount > 0 || items.length > 0 || unrecognizedItems.length > 0 };
   }).filter(record => record.hasData);
 
   if (!records.length) {
