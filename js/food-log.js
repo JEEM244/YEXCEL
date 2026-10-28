@@ -92,7 +92,7 @@ function clearForm() {
 }
 function getFormData() {
   const items = [];
-  $(".item-group").forEach(group => {
+  $$(".item-group").forEach(group => {
     $$(".line-row", group).forEach(row => {
       const description = $(".line-description", row).value.trim();
       const quantityRaw = $(".line-quantity", row).value;
