@@ -1,28 +1,77 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#080b12"><meta name="description" content="Registra comidas por fecha, consulta tu historial y exporta datos compatibles con Excel."><link rel="icon" type="image/svg+xml" href="assets/yexcel-mark.svg"><meta property="og:title" content="YEXCEL — Registro diario"><meta property="og:description" content="Registro personal de comidas con historial y exportación de datos."><title>YEXCEL — Registro diario</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="css/styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="Captura registros diarios de alimentos y genera el concentrado organizado para Excel.">
+  <link rel="icon" type="image/svg+xml" href="assets/yexcel-mark.svg">
+  <link rel="stylesheet" href="css/food-log.css">
+  <title>YEXCEL — Registro de alimentos</title>
 </head>
-<body><div class="app">
-<aside class="sidebar"><div class="brand">YEXCEL<b>.</b><small>DAILY LOG SYSTEM</small></div><nav class="nav" aria-label="Navegación principal"><button class="active" data-view="inicio"><span class="ico">⌂</span>Inicio</button><button data-view="registro"><span class="ico">＋</span>Registro diario</button><button data-view="historial"><span class="ico">◷</span>Historial</button><button data-view="exportar"><span class="ico">⇩</span>Exportar Excel</button></nav><div class="sidefoot"><span class="online">●</span> PROTOTIPO LOCAL<br>Diseño inicial · Versión 0.1</div></aside>
-<main><header class="top"><div><div class="kicker" id="kicker">Tu espacio personal</div><h1 class="title" id="title">Panel de control</h1></div><div class="profile"><div><b>Mi espacio</b><div class="muted" style="font-size:11px;text-align:right">Registro personal</div></div><div class="avatar">Y</div></div></header>
-<section class="view active" id="view-inicio"><div class="layout"><div class="col">
-<div class="hero"><div class="hero-content"><span class="pill">SISTEMA DE REGISTRO PERSONAL</span><h2>Un día a la vez.<br><span>Todo bajo control.</span></h2><p>Registra tus comidas por fecha, consulta tu historial y mantén tus datos organizados en un solo lugar.</p><div class="actions"><button class="primary" id="addMain">＋ Nuevo registro</button><button class="secondary" data-goto="historial">Ver historial ↗</button></div></div><div class="hero-word">Y / LOG</div></div>
-<div class="stats"><article class="stat"><div class="stathead">Días registrados <span class="staticon">▦</span></div><strong id="statDays">00</strong><small>Fechas con actividad</small></article><article class="stat"><div class="stathead">Comidas guardadas <span class="staticon">✣</span></div><strong id="statMeals">00</strong><small>Registros totales</small></article><article class="stat"><div class="stathead">Este mes <span class="staticon">↗</span></div><strong id="statMonth">00</strong><small>Comidas registradas</small></article></div>
-<section class="panel"><div class="panelhead"><h3>Inspiración del cliente</h3><span class="muted">Oscuro · azul · discreto</span></div><div class="games"><article class="game"><div class="art red"><b>RESIDENT<br>EVIL 4</b></div><div class="gamebody"><p>Contraste oscuro y detalles cinematográficos.</p></div></article><article class="game"><div class="art"><b>CLASH<br>ROYALE</b></div><div class="gamebody"><p>Tarjetas ordenadas y estadísticas directas.</p></div></article><article class="game"><div class="art green"><b>CAR CULTURE</b></div><div class="gamebody"><p>Inspiración automotriz sobria.</p></div></article></div></section>
-<section class="panel"><div class="panelhead"><h3>Registro de hoy</h3><span class="muted" id="todayLabel"></span></div><div id="todayRecords"></div></section>
-</div><div class="col rightcol">
-<section class="panel calendarpanel"><div class="calendar-head"><h3>Calendario</h3><span class="muted" style="font-size:10px">Elige una fecha</span></div><div class="calendar-head"><div class="monthnav"><button id="prev" aria-label="Mes anterior">‹</button><span class="monthlabel" id="monthLabel"></span><button id="next" aria-label="Mes siguiente">›</button></div></div><div class="weekdays"><span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span><span>DOM</span></div><div class="days" id="days"></div><div class="calfoot"><span id="selectedLabel"></span><b id="selectedCount">0 registros</b></div></section>
-<section class="quote"><small>UN PASO A LA VEZ</small><p>La organización empieza con <span>un pequeño hábito.</span></p></section>
-<section class="panel"><div class="panelhead"><h3>Exportación de datos</h3><span class="staticon">⇩</span></div><p class="muted" style="font-size:12px;line-height:1.7">El prototipo podrá exportar tus registros a un archivo compatible con Excel. El formato definitivo se ajustará a la plantilla del cliente.</p><button class="secondary" style="width:100%" data-goto="exportar">Ver opciones de exportación →</button></section>
-</div></div></section>
-<section class="view" id="view-registro"><div class="layout"><div class="col"><section class="panel"><div class="panelhead"><h3>Registro diario</h3><span class="tag" id="formDateLabel"></span></div><p class="muted" style="line-height:1.7">Agrega una comida a la fecha seleccionada. Estos campos son provisionales y podrán cambiarse según la estructura que entregue el cliente.</p><button class="primary" id="openForm">＋ Agregar comida</button></section><section class="panel"><div class="panelhead"><h3>Comidas de esta fecha</h3></div><div id="selectedRecords"></div></section></div><div class="col"><section class="panel"><h3>Resumen del día</h3><div style="display:flex;justify-content:space-between;margin-top:20px"><span class="muted">Comidas registradas</span><b id="dayCount">0</b></div><div style="height:5px;background:#263247;border-radius:8px;margin-top:10px;overflow:hidden"><div id="progress" style="height:100%;width:0;background:var(--blue)"></div></div></section></div></div></section>
-<section class="view" id="view-historial"><section class="panel"><div class="panelhead"><h3>Historial de registros</h3><span class="muted" id="historyCount">0 registros</span></div><div class="historytools"><input id="search" type="search" placeholder="Buscar comida, nota o fecha…" aria-label="Buscar registros"><select id="filter" aria-label="Filtrar por tipo de comida"><option value="">Todas las comidas</option><option>Desayuno</option><option>Colación</option><option>Comida</option><option>Merienda</option><option>Cena</option><option>Otro</option></select><label class="datefilter">Desde<input id="fromDate" type="date" aria-label="Fecha inicial"></label><label class="datefilter">Hasta<input id="toDate" type="date" aria-label="Fecha final"></label><button class="secondary clear-filters" id="clearFilters" type="button">Limpiar filtros</button></div><div id="historyRecords"></div></section></section>
-<section class="view" id="view-exportar"><div class="layout"><div class="col"><section class="panel"><div class="panelhead"><h3>Exportar a Excel</h3><span class="tag">CSV</span></div><p class="exportinfo">Descarga los registros en CSV, un formato que abre Excel. Cuando el cliente comparta su plantilla, adaptaremos los encabezados y el orden de las columnas.</p><div class="stats" style="margin:18px 0"><article class="stat"><div class="stathead">Registros</div><strong id="exportMeals">00</strong><small>En el archivo</small></article><article class="stat"><div class="stathead">Fechas</div><strong id="exportDays">00</strong><small>Con actividad</small></article><article class="stat"><div class="stathead">Formato</div><strong style="font-size:21px">.CSV</strong><small>Compatible con Excel</small></article></div><div class="export-actions"><button class="primary" id="download">⇩ Descargar CSV</button><button class="secondary" id="downloadBackup" type="button">⇩ Respaldo JSON</button><label class="secondary import-label" for="importBackup">Restaurar respaldo JSON</label><input id="importBackup" class="sr-only" type="file" accept=".json,application/json"></div><p class="muted export-note">Restaurar reemplaza los registros actuales; guarda un respaldo antes de hacerlo.</p></section></div><div class="col"><section class="panel"><h3>Por definir con el cliente</h3><ul class="muted" style="font-size:12px;line-height:2;padding-left:18px"><li>Columnas exactas de Excel</li><li>Formato de fechas</li><li>Datos obligatorios</li><li>Una hoja o varias hojas</li></ul></section></div></div></section>
-<footer class="footer"><span>YEXCEL · Prototipo de diseño</span><span>Negro + azul · interfaz sobria</span></footer></main></div>
-<div class="modalback" id="modalback" aria-hidden="true"><form class="modal" id="form" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modalhead"><h2 id="modalTitle">Nuevo registro</h2><button class="close" id="close" type="button">×</button></div><div class="formgrid"><div class="field"><label for="date">Fecha</label><input id="date" type="date" required></div><div class="field"><label for="type">Tipo de comida</label><select id="type"><option>Desayuno</option><option>Colación</option><option>Comida</option><option>Merienda</option><option>Cena</option><option>Otro</option></select></div><div class="field full"><label for="food">¿Qué comiste?</label><input id="food" maxlength="120" placeholder="Ej. huevos con tortilla" required></div><div class="field"><label for="time">Hora (opcional)</label><input id="time" type="time"></div><div class="field"><label for="drink">Bebida (opcional)</label><input id="drink" maxlength="80" placeholder="Ej. agua natural"></div><div class="field full"><label for="notes">Notas (opcional)</label><textarea id="notes" rows="3" maxlength="400" placeholder="Detalles adicionales…"></textarea></div></div><div class="modalactions"><button type="button" class="secondary" id="cancel">Cancelar</button><button type="submit" class="primary" id="submitMeal">Guardar registro</button></div></form></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="js/app.js"></script></body></html>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="YEXCEL inicio">YEXCEL<span>.</span><small>REGISTRO DE ALIMENTOS</small></a>
+      <nav aria-label="Navegación principal">
+        <a class="nav-link active" href="#registro"><span>＋</span> Capturar registro</a>
+        <a class="nav-link" href="#records"><span>▤</span> Historial</a>
+        <a class="nav-link" href="#export"><span>⇩</span> Exportar a Excel</a>
+      </nav>
+      <div class="sidebar-note"><span class="status-dot"></span> <span id="storageState">Guardado en este navegador</span><small>Los datos se guardan localmente en este dispositivo.</small></div>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div><p class="eyebrow">CONTROL DE COCINA · DIF</p><h1>Registro de alimentos</h1><p class="subtitle">Captura los datos de la hoja física y genera el concentrado para Excel.</p></div>
+        <button id="addNew" class="button primary" type="button">＋ Nuevo registro</button>
+      </header>
+
+      <section class="stats" aria-label="Resumen">
+        <article class="stat-card"><span>Registros guardados</span><strong id="statDays">0</strong><small>Una hoja por fecha</small></article>
+        <article class="stat-card"><span>Insumos capturados</span><strong id="statItems">0</strong><small>En todos los registros</small></article>
+        <article class="stat-card"><span>Centros registrados</span><strong id="statCenters">0</strong><small>Según el nombre del centro</small></article>
+      </section>
+
+      <section class="panel" id="registro">
+        <div class="section-heading"><div><p class="eyebrow">FORMATO DE CAPTURA</p><h2 id="formHeading">Nuevo registro de alimentos</h2></div><span class="step-tag">01 / CAPTURA</span></div>
+        <form id="logForm">
+          <div class="form-section">
+            <h3>Datos generales</h3>
+            <div class="form-grid">
+              <label>Fecha <input id="date" type="date" required></label>
+              <label>Centro / Casa club <input id="center" maxlength="120" value="Casa club: Caminando Juntos" required></label>
+              <label>Encargado de cocina <input id="cook" maxlength="120" placeholder="Nombre de quien llena el formato"></label>
+              <label>Desayunos otorgados <input id="breakfasts" type="number" min="0" max="1000000" step="1" placeholder="Cantidad"></label>
+              <label>Comidas otorgadas <input id="mealsServed" type="number" min="0" max="1000000" step="1" placeholder="Cantidad"></label>
+              <label>Agua <input id="water" maxlength="100" placeholder="Ej. jamaica"></label>
+              <label>Fruta <input id="fruit" maxlength="100" placeholder="Fruta del día"></label>
+              <label class="wide">Menú <input id="menu" maxlength="250" placeholder="Ej. pierna y muslo en achiote con arroz blanco"></label>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="section-heading"><div><p class="eyebrow">DETALLE DE INSUMOS</p><h3>Productos y cantidades</h3></div><p class="muted">Agrega las filas que necesites.</p></div>
+            <div id="itemGroups" class="item-groups"></div>
+          </div>
+          <div class="form-actions"><button id="clearForm" class="button secondary" type="button">Limpiar formulario</button><button id="saveLog" class="button primary" type="submit">Guardar registro</button></div>
+        </form>
+      </section>
+
+      <section class="panel" id="records">
+        <div class="section-heading"><div><p class="eyebrow">CONSULTA</p><h2>Historial de registros</h2></div><span id="recordsCount" class="count-tag">0 registros</span></div>
+        <div class="filters"><label>Buscar<input id="search" type="search" placeholder="Centro, menú, encargado o insumo"></label><label>Mes para filtrar y concentrar<input id="monthFilter" type="month"></label></div>
+        <div id="recordsList" class="records-list"></div>
+      </section>
+
+      <section class="panel export-panel" id="export">
+        <div class="section-heading"><div><p class="eyebrow">SALIDA PARA EXCEL</p><h2>Generar concentrado</h2></div><span class="step-tag">02 / EXPORTACIÓN</span></div>
+        <p>El archivo incluye dos hojas: <strong>Registros diarios</strong>, con los datos generales y cada insumo capturado, y <strong>Concentrado</strong>, con los insumos en filas, las fechas del mes en columnas y una suma total por insumo.</p>
+        <div class="export-actions"><button id="exportExcel" class="button primary" type="button">⇩ Descargar archivo de Excel</button><button id="exportBackup" class="button secondary" type="button">Descargar respaldo JSON</button><label class="button secondary import-button" for="importBackup">Restaurar respaldo JSON</label><input id="importBackup" class="visually-hidden" type="file" accept=".json,application/json"></div>
+        <p class="small-note">El archivo de Excel se genera con los registros guardados. El concentrado usa el mes seleccionado en el filtro del historial; la hoja de registros diarios incluye todos los meses.</p>
+      </section>
+      <footer>YEXCEL · Registro de alimentos · Uso local en este dispositivo</footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="js/food-log.js"></script>
+</body>
+</html>
