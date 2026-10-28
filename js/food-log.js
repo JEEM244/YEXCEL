@@ -48,18 +48,36 @@ function notify(message, error = false) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => node.classList.remove("show"), 3500);
 }
+const CATALOG = [
+  {id:"desayuno",label:"Desayuno",items:[["Yogurth","LITROS"],["Papaya","PIEZAS"]]},
+  {id:"fruta",label:"Fruta y verdura",items:[["Pimiento morrón","KG"],["Cebolla","KG"],["Tomate","KG"]]},
+  {id:"abarrotes",label:"Abarrotes y desechables",items:[["Aceite","LITRO"],["Arroz","KG"],["Tenedor","PQT"],["Cuchara","PQT"],["Servilletas","PIEZAS"]]},
+  {id:"carnes",label:"Carnes y carnes frías",items:[["Filete de pescado","PIEZAS"],["Mantequilla","KG"]]},
+  {id:"condimentos",label:"Condimentos",items:[["Garbanzo",""],["Frijol",""],["Lentejas",""],["Pimienta","KG"],["Comino","KG"],["Ajo","KG"],["Sal","KG"],["Jamaica","KG"]]}
+];
+CATEGORIES.splice(0,CATEGORIES.length,...CATALOG.map(({id,label})=>({id,label})));
 function categoryMarkup(category, items = []) {
-  const rows = items.length ? items : [{ description:"", quantity:"", unit:"" }];
-  return `<section class="item-group" data-category="${category.id}">
-    <div class="group-heading"><h3>${category.label}</h3><button class="button subtle add-line" type="button">+ Agregar insumo</button></div>
+  const defaults = CATALOG.find(c => c.id === category.id)?.items || [];
+  const saved = new Map(items.map(item => [item.description.toLocaleLowerCase("es-MX"), item]));
+  const rows = defaults.map(([description,unit]) => ({
+    category:category.id, description, unit,
+    quantity:saved.get(description.toLocaleLowerCase("es-MX"))?.quantity ?? ""
+  }));
+  items.filter(item => !defaults.some(([name]) => name.toLocaleLowerCase("es-MX") === item.description.toLocaleLowerCase("es-MX")))
+    .forEach(item => rows.push(item));
+  if (!rows.length) rows.push({description:"",quantity:"",unit:""});
+  return `<section class="item-group paper-table" data-category="${category.id}">
+    <div class="group-heading"><h3>${category.label}</h3><button class="button subtle add-line" type="button">+ Otro producto</button></div>
+    <div class="paper-columns"><span>DESCRIPCIÓN</span><span>CANT.</span><span>U.M.</span></div>
     <div class="line-list">${rows.map(lineMarkup).join("")}</div>
   </section>`;
 }
 function lineMarkup(item = {}) {
-  return `<div class="line-row">
-    <label><span>Descripción</span><input class="line-description" maxlength="100" value="${escapeHTML(item.description || "")}" placeholder="Nombre del insumo"></label>
-    <label><span>Cantidad</span><input class="line-quantity" type="number" min="0" max="100000000" step="any" value="${item.quantity ?? ""}" placeholder="0"></label>
-    <label><span>Unidad</span><input class="line-unit" maxlength="30" value="${escapeHTML(item.unit || "")}" placeholder="KG, piezas, litros..."></label>
+  const catalogUnit = item.unit || "";
+  return `<div class="line-row paper-row">
+    <label><span class="mobile-only">Descripción</span><input class="line-description" maxlength="100" value="${escapeHTML(item.description || "")}" placeholder="Nombre del insumo" aria-label="Descripción del insumo"></label>
+    <label><span class="mobile-only">Cantidad</span><input class="line-quantity" type="number" min="0" max="100000000" step="any" value="${item.quantity ?? ""}" placeholder="—" aria-label="Cantidad de ${escapeHTML(item.description || "insumo")}"></label>
+    <label><span class="mobile-only">Unidad de medida</span><input class="line-unit" maxlength="30" value="${escapeHTML(catalogUnit)}" placeholder="U.M." aria-label="Unidad de medida"></label>
     <button class="remove-line" type="button" aria-label="Quitar insumo">×</button>
   </div>`;
 }
@@ -74,7 +92,7 @@ function clearForm() {
 }
 function getFormData() {
   const items = [];
-  $$(".item-group").forEach(group => {
+  $(".item-group").forEach(group => {
     $$(".line-row", group).forEach(row => {
       const description = $(".line-description", row).value.trim();
       const quantityRaw = $(".line-quantity", row).value;
@@ -150,11 +168,7 @@ function render() {
 $("#itemGroups").innerHTML = CATEGORIES.map(category => categoryMarkup(category)).join("");
 $("#date").value = todayISO();
 $("#monthFilter").value = todayISO().slice(0, 7);
-$("#addNew").addEventListener("click", () => {
-  clearForm();
-  $("#formHeading").textContent = "Nuevo registro de alimentos";
-  $("#logForm").scrollIntoView({ behavior:"smooth", block:"start" });
-});
+// El botón Nuevo registro se conecta al sistema de vistas al final del archivo.
 $("#logForm").addEventListener("submit", event => {
   event.preventDefault();
   const log = getFormData();
