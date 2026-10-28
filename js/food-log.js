@@ -333,7 +333,7 @@ async function importSelectedPdf(file) {
     if (fields.fruit) $("#fruit").value = fields.fruit;
     if (result.items.length) {
       const imported = new Map(result.items.map(item => [item.description.toLocaleLowerCase("es-MX"), item]));
-      $(".line-row").forEach(row => {
+      $$(".line-row").forEach(row => {
         const description = $(".line-description", row).textContent.trim().toLocaleLowerCase("es-MX");
         const item = imported.get(description);
         if (item) $(".line-quantity", row).value = item.quantity;
