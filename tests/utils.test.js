@@ -54,3 +54,7 @@ test("parseISODate rejects empty input and non-string values", () => {
   assert.equal(parseISODate(null), null);
   assert.equal(parseISODate("2026-13-01"), null);
 });
+
+test("parseISODate keeps years below 100 instead of shifting them to the 1900s", () => {
+  assert.equal(parseISODate("0099-12-31").getFullYear(), 99);
+});
