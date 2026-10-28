@@ -1,5 +1,5 @@
 import { buildFoodLogXlsx } from "./xlsx-export.js";
-import { parseFoodLogPdf } from "./pdf-import.js?v=ocr-fix-5";
+import { parseFoodLogPdf } from "./pdf-import.js?v=ocr-fix-6";
 const KEY = "yexcelFoodLogsV1";
 const CATEGORIES = [
   { id: "desayuno", label: "Desayuno" },
@@ -322,32 +322,37 @@ async function importSelectedPdf(file) {
     const result = await parseFoodLogPdf(file, CATALOG, message => {
       $("#pdfImportStatus").textContent = message;
     });
-    const fields = result.fields;
-    if (fields.date) $("#date").value = fields.date;
-    if (fields.center) $("#center").value = fields.center;
-    if (fields.cook) $("#cook").value = fields.cook;
-    if (fields.breakfasts !== "" && Number.isFinite(fields.breakfasts)) $("#breakfasts").value = fields.breakfasts;
-    if (fields.mealsServed !== "" && Number.isFinite(fields.mealsServed)) $("#mealsServed").value = fields.mealsServed;
-    if (fields.menu) $("#menu").value = fields.menu;
-    if (fields.water) $("#water").value = fields.water;
-    if (fields.fruit) $("#fruit").value = fields.fruit;
-    if (result.items.length) {
-      const imported = new Map(result.items.map(item => [item.description.toLocaleLowerCase("es-MX"), item]));
-      $$(".line-row").forEach(row => {
-        const description = $(".line-description", row).textContent.trim().toLocaleLowerCase("es-MX");
-        const item = imported.get(description);
-        if (item) $(".line-quantity", row).value = item.quantity;
-      });
-    }
-    const filled = Object.values(fields).filter(value => value !== "" && value != null).length + result.items.length;
-    if (!filled) {
-      $("#pdfImportStatus").textContent = "El PDF se abrió, pero no se detectaron datos reconocibles. Revisa que sea el formato correcto.";
+    const importedLogs = result.records.map(record => {
+      const fields = record.fields;
+      return {
+        id: uid(),
+        date: fields.date || todayISO(),
+        center: fields.center || "Casa club: Caminando Juntos",
+        cook: fields.cook || "",
+        breakfasts: fields.breakfasts,
+        mealsServed: fields.mealsServed,
+        menu: fields.menu || "",
+        water: fields.water || "",
+        fruit: fields.fruit || "",
+        items: record.items.map(item => ({ ...item }))
+      };
+    });
+    if (!importedLogs.length) {
+      $("#pdfImportStatus").textContent = "No se detectaron hojas con datos reconocibles.";
       $("#pdfImportStatus").classList.add("error");
       notify("No se detectaron datos reconocibles en el PDF.", true);
       return;
     }
-    $("#pdfImportStatus").textContent = `Extracción terminada${result.usedOCR ? " mediante OCR" : ""}: ${result.pageCount} página(s), ${filled} dato(s) detectado(s). Revisa los campos antes de guardar.`;
-    notify("PDF leído. Revisa los datos y guarda el registro.");
+    logs.push(...importedLogs);
+    if (!save()) {
+      logs = logs.filter(log => !importedLogs.some(imported => imported.id === log.id));
+      return;
+    }
+    clearForm();
+    const skipped = result.skippedPages ? ` Se omitieron ${result.skippedPages} página(s) sin datos detectables.` : "";
+    $("#pdfImportStatus").textContent = `Importación terminada${result.usedOCR ? " mediante OCR" : ""}: ${importedLogs.length} registro(s) creado(s) de ${result.pageCount} página(s). Cada página se guardó como un registro independiente. Revisa el historial y corrige los datos que el OCR no haya reconocido.${skipped}`;
+    notify(`PDF importado: ${importedLogs.length} registro(s) creado(s).`);
+    showView("records");
   } catch (error) {
     console.error("YEXCEL PDF import error:", error);
     $("#pdfImportStatus").textContent = error?.message || "No se pudo procesar el PDF.";
