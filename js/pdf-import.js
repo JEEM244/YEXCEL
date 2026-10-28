@@ -215,11 +215,12 @@ export async function parseFoodLogPdf(file, catalog, onProgress) {
         if (quantity !== null) {
           items.push({ category: category.id, description, unit, quantity });
         } else {
-          const escaped = description.replace(/[.*+?^${}()|[\]\\]/g, "\\    const items = [];
-    for (const category of catalog || []) {
-      for (const [description, unit] of category.items || []) {
-        const quantity = getQuantityForItem(text, description);
-        if (quantity !== null) items.push({ category: category.id, description, unit, quantity });
+          const escaped = description.replace(/[.*+?^${}()|[\]\\]/g, String.fromCharCode(92) + "$&");
+          const itemMentioned = new RegExp("(^|[^\\p{L}])" + escaped + "(?=$|[^\\p{L}])", "iu").test(text);
+          if (itemMentioned) {
+            unrecognizedItems.push({ category: category.id, description, unit, quantity: "", recognitionStatus: "unrecognized" });
+          }
+        }
       }
     }
     const fields = {");
