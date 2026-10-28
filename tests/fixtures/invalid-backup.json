@@ -1,0 +1,13 @@
+{
+  "format": "yexcel-backup",
+  "version": 999,
+  "createdAt": "not-a-date",
+  "meals": [
+    {
+      "id": "backup-invalid-1",
+      "date": "2026-02-30",
+      "type": "Snack",
+      "food": ""
+    }
+  ]
+}
