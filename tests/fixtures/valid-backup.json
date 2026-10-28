@@ -1,0 +1,16 @@
+{
+  "format": "yexcel-backup",
+  "version": 1,
+  "createdAt": "2026-10-27T12:00:00.000Z",
+  "meals": [
+    {
+      "id": "backup-fixture-1",
+      "date": "2026-10-27",
+      "type": "Desayuno",
+      "food": "Avena con plátano",
+      "time": "07:15",
+      "drink": "Agua",
+      "notes": "Dato ficticio para prueba"
+    }
+  ]
+}
