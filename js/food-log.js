@@ -313,6 +313,7 @@ async function importSelectedPdf(file) {
   }
   if (pdfBusy) return;
   pdfBusy = true;
+  pdfInput.value = ""; // Permite volver a elegir el mismo archivo si el usuario reintenta.
   $("#pdfFileName").textContent = file.name;
   $("#pdfImportStatus").textContent = "Preparando el PDF para extraer sus datos…";
   $("#pdfImportStatus").classList.remove("error");
@@ -359,8 +360,16 @@ async function importSelectedPdf(file) {
 }
 
 pdfInput.addEventListener("change", event => {
-  const file = event.target.files?.[0];
-  if (file) importSelectedPdf(file);
+  const file = event.currentTarget.files?.[0] || event.target.files?.[0];
+  if (!file) {
+    $("#pdfImportStatus").textContent = "No se recibió ningún archivo. Pulsa el selector y elige el PDF.";
+    $("#pdfImportStatus").classList.add("error");
+    return;
+  }
+  $("#pdfFileName").textContent = file.name;
+  $("#pdfImportStatus").textContent = "Archivo detectado. La extracción comenzará automáticamente…";
+  $("#pdfImportStatus").classList.remove("error");
+  importSelectedPdf(file);
 });
 pdfDropzone?.addEventListener("click", event => {
   if (event.target !== pdfInput) pdfInput.click();
