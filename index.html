@@ -49,7 +49,7 @@
             </div>
           </div>
           <div class="form-section">
-            <div class="section-heading"><div><p class="eyebrow">DETALLE DE INSUMOS</p><h3>Productos y cantidades</h3></div><p class="muted">Agrega las filas que necesites.</p></div>
+            <div class="section-heading"><div><p class="eyebrow">DETALLE DE INSUMOS</p><h3>Productos y cantidades</h3></div><p class="muted">Los nombres y las unidades se cargan automáticamente; captura solo las cantidades.</p></div>
             <div id="itemGroups" class="item-groups"></div>
           </div>
           <div class="form-actions"><button id="clearForm" class="button secondary" type="button">Limpiar formulario</button><button id="saveLog" class="button primary" type="submit">Guardar registro</button></div>
@@ -64,9 +64,9 @@
 
       <section class="panel export-panel" id="export">
         <div class="section-heading"><div><p class="eyebrow">SALIDA PARA EXCEL</p><h2>Generar concentrado</h2></div><span class="step-tag">02 / EXPORTACIÓN</span></div>
-        <p>El archivo incluye dos hojas: <strong>Registros diarios</strong>, con los datos generales y cada insumo capturado, y <strong>Concentrado</strong>, con los insumos en filas, las fechas del mes en columnas y una suma total por insumo.</p>
+        <p>El archivo .xlsx incluye dos hojas: <strong>Concentrado</strong>, con los insumos, una columna por fecha y el total automático, y <strong>Registros diarios</strong>, con los datos generales y cada insumo capturado.</p>
         <div class="export-actions"><button id="exportExcel" class="button primary" type="button">⇩ Descargar archivo de Excel</button><button id="exportBackup" class="button secondary" type="button">Descargar respaldo JSON</button><label class="button secondary import-button" for="importBackup">Restaurar respaldo JSON</label><input id="importBackup" class="visually-hidden" type="file" accept=".json,application/json"></div>
-        <p class="small-note">El archivo de Excel se genera con los registros guardados. El concentrado usa el mes seleccionado en el filtro del historial; la hoja de registros diarios incluye todos los meses.</p>
+        <p class="small-note">El archivo .xlsx real se genera con los registros guardados. El concentrado usa el mes seleccionado en el filtro del historial; la hoja de registros diarios incluye todos los meses.</p>
       </section>
       <footer>YEXCEL · Registro de alimentos · Uso local en este dispositivo</footer>
     </main>
