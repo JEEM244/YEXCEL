@@ -134,9 +134,9 @@ $("#form").addEventListener("submit", (event) => {
   }
 });
 
-function recordsMarkup(items) {
+function recordsMarkup(items, dateForEmpty = selectedDate) {
   if (!items.length) {
-    return '<div class="empty"><div class="emptyicon" aria-hidden="true">＋</div><h4>Sin registros por ahora</h4><p>Agrega una comida para empezar a organizar esta fecha.</p><button class="primary addempty" type="button">＋ Agregar comida</button></div>';
+    return '<div class="empty"><div class="emptyicon" aria-hidden="true">＋</div><h4>Sin registros por ahora</h4><p>Agrega una comida para empezar a organizar esta fecha.</p><button class="primary addempty" type="button" data-date="' + escapeHTML(dateForEmpty) + '">＋ Agregar comida</button></div>';
   }
   return '<div class="records">' + items.map((meal) => {
     const meta = [meal.type, meal.time, meal.drink].filter(Boolean).map(escapeHTML).join(" · ");
@@ -151,7 +151,12 @@ function recordsMarkup(items) {
 }
 
 function wireRecordButtons(root) {
-  root.querySelectorAll(".addempty").forEach((button) => button.addEventListener("click", () => openForm()));
+  root.querySelectorAll(".addempty").forEach((button) => button.addEventListener("click", () => {
+    selectedDate = button.dataset.date || selectedDate;
+    const date = parseISODate(selectedDate);
+    if (date) cursor = new Date(date.getFullYear(), date.getMonth(), 1);
+    openForm();
+  }));
   root.querySelectorAll(".edit").forEach((button) => button.addEventListener("click", () => openForm(button.dataset.id)));
   root.querySelectorAll(".del").forEach((button) => button.addEventListener("click", () => {
     const meal = meals.find((item) => item.id === button.dataset.id);
@@ -160,8 +165,8 @@ function wireRecordButtons(root) {
   }));
 }
 
-function renderList(node, items) {
-  node.innerHTML = recordsMarkup(items);
+function renderList(node, items, dateForEmpty = selectedDate) {
+  node.innerHTML = recordsMarkup(items, dateForEmpty);
   wireRecordButtons(node);
 }
 
@@ -303,8 +308,8 @@ function render() {
   $("#statMeals").textContent = String(meals.length).padStart(2, "0");
   $("#statMonth").textContent = String(meals.filter((meal) => meal.date.startsWith(monthPrefix)).length).padStart(2, "0");
   $("#todayLabel").textContent = formatDateEs(today);
-  renderList($("#todayRecords"), todaysMeals);
-  renderList($("#selectedRecords"), selectedMeals);
+  renderList($("#todayRecords"), todaysMeals, today);
+  renderList($("#selectedRecords"), selectedMeals, selectedDate);
   $("#formDateLabel").textContent = formatDateEs(selectedDate);
   $("#dayCount").textContent = String(selectedMeals.length);
   $("#progress").style.width = Math.min(100, selectedMeals.length * 20) + "%";
