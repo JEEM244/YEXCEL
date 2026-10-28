@@ -103,7 +103,25 @@ $("#modalback").addEventListener("click", (event) => {
   if (event.target === $("#modalback")) closeForm();
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && $("#modalback").classList.contains("open")) closeForm();
+  if (!$("#modalback").classList.contains("open")) return;
+  if (event.key === "Escape") {
+    closeForm();
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const focusable = Array.from($("#form").querySelectorAll(
+    'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex="-1"])'
+  )).filter((element) => !element.hidden && element.offsetParent !== null);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 });
 
 $("#form").addEventListener("submit", (event) => {
