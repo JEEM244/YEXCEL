@@ -113,8 +113,8 @@ function clearForm() {
 function getFormData() {
   const items = [];
   const unrecognizedItems = [];
-  $(".item-group").forEach(group => {
-    $(".line-row", group).forEach(row => {
+  $$(".item-group").forEach(group => {
+    $$(".line-row", group).forEach(row => {
       const description = ($(".item-name", row)?.textContent || $(".line-description", row).textContent).trim();
       const quantityRaw = $(".line-quantity", row).value;
       const unitText = $(".line-unit", row).textContent.trim();
