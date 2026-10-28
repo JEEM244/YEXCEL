@@ -149,7 +149,29 @@ async function extractPdfText(pdf, pdfjs, onProgress) {
       const context = canvas.getContext("2d", { willReadFrequently: true });
       await page.render({ canvasContext: context, viewport }).promise;
       const result = await worker.recognize(canvas);
-      pages[index] = result.data.text || "";
+      const words = (result.data.words || []).filter(word => word.text?.trim() && word.bbox);
+      if (words.length) {
+        const sorted = words.map(word => ({
+          text: word.text.trim(),
+          x: word.bbox.x0,
+          y: (word.bbox.y0 + word.bbox.y1) / 2
+        })).sort((a, b) => a.y - b.y || a.x - b.x);
+        const rows = [];
+        for (const word of sorted) {
+          let row = rows.find(candidate => Math.abs(candidate.y - word.y) <= 13);
+          if (!row) {
+            row = { y: word.y, words: [] };
+            rows.push(row);
+          }
+          row.words.push(word);
+          row.y = row.words.reduce((sum, item) => sum + item.y, 0) / row.words.length;
+        }
+        pages[index] = rows.sort((a, b) => a.y - b.y)
+          .map(row => row.words.sort((a, b) => a.x - b.x).map(word => word.text).join("  "))
+          .join("\\n");
+      } else {
+        pages[index] = result.data.text || "";
+      }
       canvas.width = 0;
       canvas.height = 0;
     }
