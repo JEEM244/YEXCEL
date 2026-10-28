@@ -58,3 +58,8 @@ test("parseISODate rejects empty input and non-string values", () => {
 test("parseISODate keeps years below 100 instead of shifting them to the 1900s", () => {
   assert.equal(parseISODate("0099-12-31").getFullYear(), 99);
 });
+
+test("createId produces distinct ids across repeated calls", () => {
+  const ids = new Set(Array.from({ length: 200 }, () => createId()));
+  assert.equal(ids.size, 200);
+});
