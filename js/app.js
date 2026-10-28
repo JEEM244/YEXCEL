@@ -254,6 +254,15 @@ $("#search").addEventListener("input", renderHistory);
 $("#filter").addEventListener("change", renderHistory);
 $("#fromDate")?.addEventListener("change", renderHistory);
 $("#toDate")?.addEventListener("change", renderHistory);
+
+$("#clearFilters")?.addEventListener("click", () => {
+  $("#search").value = "";
+  $("#filter").value = "";
+  if ($("#fromDate")) $("#fromDate").value = "";
+  if ($("#toDate")) $("#toDate").value = "";
+  renderHistory();
+  toast("Filtros limpiados.");
+});
 $("#prev").addEventListener("click", () => {
   cursor = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1);
   calendar();
