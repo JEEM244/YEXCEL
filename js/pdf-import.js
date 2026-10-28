@@ -99,8 +99,17 @@ async function extractPdfText(pdf, pdfjs, onProgress) {
 
   // Scanned PDFs have no selectable text. Render each page and use Spanish OCR.
   onProgress?.("El PDF es un escaneo. Activando reconocimiento de texto (OCR en español)…");
-  const tesseract = await import(TESSERACT_URL);
+  let tesseract;
+  try {
+    tesseract = await import(TESSERACT_URL);
+  } catch (error) {
+    throw new Error("No se pudo cargar el motor OCR. Revisa tu conexión a internet y vuelve a intentarlo.");
+  }
   const worker = await tesseract.createWorker("spa", 1, {
+    workerPath: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js",
+    corePath: "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1",
+    langPath: "https://tessdata.projectnaptha.com/4.0.0",
+    workerBlobURL: false,
     logger: message => {
       if (message.status === "recognizing text") {
         const percent = Math.round((message.progress || 0) * 100);
