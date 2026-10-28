@@ -1,12 +1,12 @@
 {
   "name": "yexcel",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "Registro local de comidas con exportación compatible con Excel",
+  "description": "Registro diario de alimentos con concentrado compatible con Excel",
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "node --check js/app.js && node --check js/utils.js && node --check js/storage.js && node --check js/export.js"
+    "check": "node --check js/app.js && node --check js/utils.js && node --check js/storage.js && node --check js/export.js && node --check js/food-log.js"
   },
   "engines": {
     "node": ">=20"
