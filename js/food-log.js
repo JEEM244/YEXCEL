@@ -281,3 +281,37 @@ $("#importBackup").addEventListener("change", async event => {
 });
 $("#clearForm").addEventListener("click", clearForm);
 render();
+
+const viewCopy = {
+  registro: { title: "Capturar registro", subtitle: "Llena la hoja del día sin volver a escribir los nombres de los insumos." },
+  records: { title: "Historial de registros", subtitle: "Busca, revisa y corrige registros guardados en este dispositivo." },
+  export: { title: "Exportar a Excel", subtitle: "Genera el archivo organizado para continuar el trabajo en Excel." }
+};
+function showView(view) {
+  if (!viewCopy[view]) return;
+  ["registro", "records", "export"].forEach(id => {
+    const section = document.getElementById(id);
+    if (section) section.hidden = id !== view;
+  });
+  $(".nav-link[data-view]").forEach(button => {
+    const active = button.dataset.view === view;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+  $("#pageTitle").textContent = viewCopy[view].title;
+  $(".topbar .subtitle").textContent = viewCopy[view].subtitle;
+  $(".stats").hidden = view !== "registro";
+  $("#addNew").hidden = view !== "registro";
+  history.replaceState(null, "", "#" + view);
+}
+$(".nav-link[data-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
+$("#addNew").addEventListener("click", () => {
+  clearForm();
+  showView("registro");
+  $("#formHeading").textContent = "Nuevo registro de alimentos";
+  $("#date").focus({ preventScroll: true });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+const initialView = location.hash.slice(1);
+showView(viewCopy[initialView] ? initialView : "registro");
+
