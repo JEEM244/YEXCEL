@@ -97,7 +97,8 @@ function getFormData() {
       const description = $(".line-description", row).value.trim();
       const quantityRaw = $(".line-quantity", row).value;
       const unit = $(".line-unit", row).value.trim();
-      if (!description && quantityRaw === "" && !unit) return;
+      if (quantityRaw === "") return;
+      if (!description && !unit) return;
       items.push({
         category: group.dataset.category,
         description,
