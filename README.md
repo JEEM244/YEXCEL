@@ -35,6 +35,12 @@ npm run check
 - Exportación CSV compatible con Excel.
 - Respaldo JSON versionado en la nueva capa de exportación (la integración visual está en progreso).
 
+## Pruebas y documentación
+
+Ejecuta `npm test` y `npm run check` con Node.js 20 o superior. Consulta `docs/MANUAL-QA.md` para las verificaciones que todavía necesitan un navegador real. La integración continua se configura en `.github/workflows/tests.yml`.
+
+La carpeta `docs/` reúne arquitectura, privacidad, modelo de datos, preguntas al cliente, formato CSV, respaldo, despliegue, solución de problemas y hoja de ruta.
+
 ## Importante
 
 Los datos se guardan en el navegador actual. No hay cuentas, sincronización ni respaldo automático. Borrar datos del sitio puede hacer que se pierdan registros. Los encabezados de exportación todavía son provisionales: deben ajustarse a la plantilla exacta que entregue el cliente.
