@@ -299,22 +299,28 @@ $("#importBackup").addEventListener("change", async event => {
   } catch { notify("No se pudo leer el respaldo JSON.", true); }
 });
 
-$("#pdfFile").addEventListener("change", event => {
-  const file = event.target.files?.[0];
-  $("#pdfFileName").textContent = file ? file.name : "Ningún archivo seleccionado";
-  $("#pdfImportStatus").textContent = file ? "PDF listo. Pulsa “Extraer y llenar datos”." : "Funciona con PDF que contienen texto seleccionable; los PDF escaneados requieren OCR.";
+const pdfInput = $("#pdfFile");
+const pdfDropzone = $("#pdfDropzone");
+let pdfBusy = false;
+
+async function importSelectedPdf(file) {
+  if (!file) return;
+  if (!file.name?.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
+    $("#pdfImportStatus").textContent = "Ese archivo no es un PDF. Selecciona un archivo .pdf.";
+    $("#pdfImportStatus").classList.add("error");
+    notify("Selecciona un archivo PDF válido.", true);
+    return;
+  }
+  if (pdfBusy) return;
+  pdfBusy = true;
+  $("#pdfFileName").textContent = file.name;
+  $("#pdfImportStatus").textContent = "Preparando el PDF para extraer sus datos…";
   $("#pdfImportStatus").classList.remove("error");
-});
-$("#parsePdf").addEventListener("click", async () => {
-  const file = $("#pdfFile").files?.[0];
-  if (!file) return notify("Selecciona primero un archivo PDF.", true);
-  const button = $("#parsePdf");
-  button.disabled = true;
-  button.textContent = "Extrayendo…";
-  $("#pdfImportStatus").textContent = "Leyendo el PDF y buscando los campos del registro…";
-  $("#pdfImportStatus").classList.remove("error");
+  pdfDropzone?.classList.add("is-processing");
   try {
-    const result = await parseFoodLogPdf(file, CATALOG, message => {\n      $("#pdfImportStatus").textContent = message;\n    });
+    const result = await parseFoodLogPdf(file, CATALOG, message => {
+      $("#pdfImportStatus").textContent = message;
+    });
     const fields = result.fields;
     if (fields.date) $("#date").value = fields.date;
     if (fields.center) $("#center").value = fields.center;
@@ -334,23 +340,63 @@ $("#parsePdf").addEventListener("click", async () => {
     }
     const filled = Object.values(fields).filter(value => value !== "" && value != null).length + result.items.length;
     if (!filled) {
-      $("#pdfImportStatus").textContent = "Se leyó el PDF, pero no se reconocieron campos con suficiente certeza. Revisa que corresponda al formato de registro de alimentos.";
+      $("#pdfImportStatus").textContent = "El PDF se abrió, pero no se detectaron datos reconocibles. Revisa que sea el formato correcto.";
       $("#pdfImportStatus").classList.add("error");
-      return notify("No se detectaron datos reconocibles en el PDF.", true);
+      notify("No se detectaron datos reconocibles en el PDF.", true);
+      return;
     }
-    $("#pdfImportStatus").textContent = `Extracción terminada${result.usedOCR ? " mediante OCR" : ""}: ${result.pageCount} página(s), ${filled} dato(s) detectado(s). Revisa los campos y cantidades antes de guardar.`;
-    notify("Datos extraídos. Revísalos antes de guardar.");
+    $("#pdfImportStatus").textContent = `Extracción terminada${result.usedOCR ? " mediante OCR" : ""}: ${result.pageCount} página(s), ${filled} dato(s) detectado(s). Revisa los campos antes de guardar.`;
+    notify("PDF leído. Revisa los datos y guarda el registro.");
   } catch (error) {
     console.error("YEXCEL PDF import error:", error);
     $("#pdfImportStatus").textContent = error?.message || "No se pudo procesar el PDF.";
     $("#pdfImportStatus").classList.add("error");
     notify(error?.message || "No se pudo procesar el PDF.", true);
   } finally {
-    button.disabled = false;
-    button.textContent = "Extraer y llenar datos";
+    pdfBusy = false;
+    pdfDropzone?.classList.remove("is-processing");
+  }
+}
+
+pdfInput.addEventListener("change", event => {
+  const file = event.target.files?.[0];
+  if (file) importSelectedPdf(file);
+});
+pdfDropzone?.addEventListener("click", event => {
+  if (event.target !== pdfInput) pdfInput.click();
+});
+pdfDropzone?.addEventListener("keydown", event => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    pdfInput.click();
   }
 });
-
+["dragenter", "dragover"].forEach(type => pdfDropzone?.addEventListener(type, event => {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "copy";
+  pdfDropzone.classList.add("is-dragover");
+}));
+["dragleave", "dragend"].forEach(type => pdfDropzone?.addEventListener(type, event => {
+  event.preventDefault();
+  pdfDropzone.classList.remove("is-dragover");
+}));
+pdfDropzone?.addEventListener("drop", event => {
+  event.preventDefault();
+  pdfDropzone.classList.remove("is-dragover");
+  const file = [...(event.dataTransfer?.files || [])].find(item => item.type === "application/pdf" || item.name.toLowerCase().endsWith(".pdf"));
+  if (!file) {
+    $("#pdfImportStatus").textContent = "No se encontró un PDF. Suelta un archivo con extensión .pdf.";
+    $("#pdfImportStatus").classList.add("error");
+    notify("Arrastra un archivo PDF.", true);
+    return;
+  }
+  try {
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    pdfInput.files = transfer.files;
+  } catch { /* El archivo se procesa aunque el navegador no permita asignarlo al input. */ }
+  importSelectedPdf(file);
+});
 $("#clearForm").addEventListener("click", clearForm);
 render();
 
