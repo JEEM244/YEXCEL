@@ -1,336 +1,192 @@
 import { buildFoodLogXlsx } from "./xlsx-export.js";
-const KEY = "yexcelFoodLogsV1";
-const CATEGORIES = [
-  { id: "desayuno", label: "Desayuno" },
-  { id: "fruta", label: "Fruta y verdura" },
-  { id: "abarrotes", label: "Abarrotes y desechables" },
-  { id: "carnes", label: "Carnes y carnes frías" }
+
+const STORAGE_KEY = "yexcelFoodLogsV1";
+const CENTER_DEFAULT = "Casa club: Caminando Juntos";
+const CATALOG = [
+  { id: "desayuno", label: "Desayuno", items: [["Yogurth", "LITROS"], ["Papaya", "PIEZAS"], ["Granola", "KG"]] },
+  { id: "fruta", label: "Fruta y verdura", items: [["Pimiento morrón", "KG"], ["Cebolla", "KG"], ["Tomate", "KG"], ["Apio", "KG"], ["Limón", "KG"], ["Cilantro", "MN"], ["Nopal", "KG"], ["Queso panela", "KG"], ["Chile poblano", "KG"]] },
+  { id: "abarrotes", label: "Abarrotes y desechables", items: [["Aceite", "LITRO"], ["Arroz", "KG"], ["Tenedor", "PQTE"], ["Cuchara", "PQTE"], ["Servilletas", "PIEZAS"], ["Achiote", "KG"], ["Jugo de naranja", "LITRO"], ["Elote", "LATAS"], ["Tortillas", "KG"], ["Consomé", "SOBRE"], ["Papel aluminio", "ROLLO"], ["Clight", "SOBRES"]] },
+  { id: "carnes", label: "Carnes y carnes frías", items: [["Filete de pescado", "PIEZAS"], ["Pierna y muslo", "KG"], ["Pechuga de pollo", "KG"], ["Carne molida", "KG"], ["Mantequilla", "KG"], ["Margarina", "PIEZAS"]] },
+  { id: "condimentos", label: "Condimentos y granos", items: [["Garbanzo", "KG"], ["Frijol", "KG"], ["Lentejas", "KG"], ["Pimienta", "KG"], ["Comino", "KG"], ["Ajo", "KG"], ["Sal", "KG"], ["Jamaica", "KG"]] }
 ];
 const $ = (selector, root = document) => root.querySelector(selector);
-const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const todayISO = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
-const uid = () => globalThis.crypto?.randomUUID?.() || `log-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-const dateLabel = value => {
-  if (!value) return "Sin fecha";
-  const [y, m, d] = value.split("-").map(Number);
-  return new Date(y, m - 1, d, 12).toLocaleDateString("es-MX", { day:"numeric", month:"long", year:"numeric" });
-};
-const numberValue = value => value === "" || value == null ? "" : Number(value);
-let logs = load();
+const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+const todayISO = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); };
+const uid = () => globalThis.crypto?.randomUUID?.() || "log-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+const num = value => value === "" || value == null ? "" : Number(value);
+const prettyDate = value => { if(!value) return "Sin fecha"; const p=value.split("-").map(Number); return new Date(p[0],p[1]-1,p[2],12).toLocaleDateString("es-MX",{day:"numeric",month:"short",year:"numeric"}); };
+const monthLabel = value => { if(!value) return "este mes"; const p=value.split("-").map(Number); return new Date(p[0],p[1]-1,1,12).toLocaleDateString("es-MX",{month:"long",year:"numeric"}); };
+let logs = loadLogs();
 let editingId = null;
+let toastTimer = null;
+let dialogResolver = null;
 
-function load() {
-  try {
-    const value = JSON.parse(localStorage.getItem(KEY) || "[]");
-    return Array.isArray(value) ? value.filter(item => item && typeof item.id === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && Array.isArray(item.items)) : [];
-  } catch { return []; }
+function loadLogs() {
+  try { const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]"); return Array.isArray(data)?data.filter(x=>x&&typeof x.id==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&Array.isArray(x.items)):[]; }
+  catch { return []; }
 }
-function save() {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(logs));
-    $("#storageState").textContent = "Guardado en este navegador";
-    render();
-    return true;
-  } catch {
-    notify("No se pudieron guardar los datos. Descarga un respaldo y libera espacio del navegador.", true);
-    return false;
-  }
+function persist() {
+  try { localStorage.setItem(STORAGE_KEY,JSON.stringify(logs)); $("#storageState").textContent="Guardado en este dispositivo"; renderAll(); return true; }
+  catch { notify("No se pudieron guardar los datos. Descarga un respaldo y libera espacio del navegador.",true); return false; }
 }
-let toastTimer;
-function notify(message, error = false) {
-  const node = $("#toast");
-  node.textContent = message;
-  node.classList.toggle("error", error);
-  node.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => node.classList.remove("show"), 3500);
+function notify(message,error=false) {
+  const node=$("#toast"); node.textContent=message; node.classList.toggle("error",error); node.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>node.classList.remove("show"),3500);
 }
-const CATALOG = [
-  {id:"desayuno",label:"Desayuno",items:[["Yogurth","LITROS"],["Papaya","PIEZAS"],["Granola","KG"]]},
-  {id:"fruta",label:"Fruta y verdura",items:[
-    ["Pimiento morrón","KG"],["Cebolla","KG"],["Tomate","KG"],["Apio","KG"],["Limón","KG"],["Cilantro","MN"],
-    ["Nopal","KG"],["Queso panela","KG"],["Chile poblano","KG"]
-  ]},
-  {id:"abarrotes",label:"Abarrotes y desechables",items:[
-    ["Aceite","LITRO"],["Arroz","KG"],["Tenedor","PQTE"],["Cuchara","PQTE"],["Servilletas","PIEZAS"],
-    ["Achiote","KG"],["Jugo de naranja","LITRO"],["Elote","LATAS"],["Tortillas","KG"],
-    ["Consomé","SOBRE"],["Papel aluminio","ROLLO"],["Clight","SOBRES"]
-  ]},
-  {id:"carnes",label:"Carnes y carnes frías",items:[
-    ["Filete de pescado","PIEZAS"],["Pierna y muslo","KG"],["Pechuga de pollo","KG"],
-    ["Carne molida","KG"],["Mantequilla","KG"],["Margarina","PIEZAS"]
-  ]},
-  {id:"condimentos",label:"Condimentos y granos",items:[
-    ["Garbanzo","KG"],["Frijol","KG"],["Lentejas","KG"],["Pimienta","KG"],
-    ["Comino","KG"],["Ajo","KG"],["Sal","KG"],["Jamaica","KG"]
-  ]}
-];
-CATEGORIES.splice(0,CATEGORIES.length,...CATALOG.map(({id,label})=>({id,label})));
-function categoryMarkup(category, items = []) {
-  const defaults = CATALOG.find(c => c.id === category.id)?.items || [];
-  const saved = new Map(items.map(item => [String(item.description || "").toLocaleLowerCase("es-MX"), item]));
-  const rows = defaults.map(([description,unit]) => ({
-    category:category.id, description, unit,
-    quantity:saved.get(description.toLocaleLowerCase("es-MX"))?.quantity ?? ""
-  }));
-  // Conserva insumos antiguos si ya había registros con productos fuera del catálogo fijo.
-  items.filter(item => !defaults.some(([name]) => name.toLocaleLowerCase("es-MX") === String(item.description || "").toLocaleLowerCase("es-MX")))
-    .forEach(item => rows.push(item));
-  return `<section class="item-group paper-table" data-category="${category.id}">
-    <div class="group-heading"><h3>${escapeHTML(category.label)}</h3></div>
-    <div class="paper-columns"><span>INSUMO</span><span>CANTIDAD</span><span>UNIDAD</span></div>
-    <div class="line-list">${rows.map(lineMarkup).join("")}</div>
-  </section>`;
+function askConfirm(title,message,confirmLabel="Confirmar") {
+  $("#dialogTitle").textContent=title; $("#dialogMessage").textContent=message; $("#dialogConfirm").textContent=confirmLabel; $("#confirmDialog").hidden=false;
+  return new Promise(resolve=>{dialogResolver=resolve;});
 }
-function lineMarkup(item = {}) {
-  const description = item.description || "";
-  const unit = item.unit || "";
-  return `<div class="line-row paper-row">
-    <div class="line-description" title="${escapeHTML(description)}">${escapeHTML(description)}</div>
-    <label class="quantity-cell"><span class="mobile-only">Cantidad</span><input class="line-quantity" type="number" min="0" max="100000000" step="any" value="${item.quantity ?? ""}" placeholder="—" aria-label="Cantidad de ${escapeHTML(description || "insumo")}"></label>
-    <div class="line-unit" aria-label="Unidad de medida">${escapeHTML(unit || "—")}</div>
-  </div>`;
+function closeDialog(value) { $("#confirmDialog").hidden=true; if(dialogResolver){const resolve=dialogResolver;dialogResolver=null;resolve(value);} }
+
+function lineMarkup(categoryId, description, unit, quantity="") {
+  const filled=quantity!==""&&quantity!=null;
+  return '<div class="line-row" data-category="'+esc(categoryId)+'" data-description="'+esc(description)+'" data-unit="'+esc(unit)+'">'+
+    '<div class="line-description">'+esc(description)+'</div>'+
+    '<label class="quantity-cell"><input class="line-quantity'+(filled?" has-value":"")+'" type="number" min="0" max="100000000" step="any" value="'+(filled?esc(quantity):"")+'" placeholder="—" aria-label="Cantidad de '+esc(description)+'"></label>'+
+    '<div class="line-unit">'+esc(unit)+'</div></div>';
+}
+function renderCatalog(existingItems=[]) {
+  const saved=new Map(existingItems.map(item=>[String(item.description||"").toLocaleLowerCase("es-MX"),item]));
+  $("#itemGroups").innerHTML=CATALOG.map(category=>{
+    const rows=category.items.map(([description,unit])=>{
+      const old=saved.get(description.toLocaleLowerCase("es-MX"));
+      return lineMarkup(category.id,description,unit,old?.quantity??"");
+    }).join("");
+    return '<section class="item-group" data-category="'+category.id+'"><div class="group-heading"><h3>'+esc(category.label)+'</h3><span class="group-count">'+category.items.length+' insumos</span></div>'+
+      '<div class="supply-head"><span>INSUMO</span><span>CANTIDAD</span><span>UNIDAD</span></div>'+rows+'</section>';
+  }).join("");
+  filterCatalog();
+}
+function filterCatalog() {
+  const query=$("#catalogSearch").value.trim().toLocaleLowerCase("es-MX"); let visible=0;
+  $$(".item-group").forEach(group=>{
+    let count=0;
+    $$(".line-row",group).forEach(row=>{const show=!query||row.dataset.description.toLocaleLowerCase("es-MX").includes(query);row.hidden=!show;if(show)count++;});
+    group.hidden=count===0;if(count)visible+=count;
+    const badge=$(".group-count",group);if(badge)badge.textContent=count+" insumos";
+  });
+  $("#noCatalogResults").hidden=visible>0;
 }
 function clearForm() {
-  editingId = null;
-  $("#logForm").reset();
-  $("#date").value = todayISO();
-  $("#center").value = "Casa club: Caminando Juntos";
-  $("#itemGroups").innerHTML = CATEGORIES.map(category => categoryMarkup(category)).join("");
-  $("#formHeading").textContent = "Nuevo registro de alimentos";
-  $("#saveLog").textContent = "Guardar registro";
+  editingId=null; $("#logForm").reset(); $("#date").value=todayISO(); $("#center").value=CENTER_DEFAULT;
+  $("#formHeading").textContent="Registro de alimentos"; $("#saveLog").innerHTML='Guardar registro <span>→</span>';
+  renderCatalog(); $("#catalogSearch").value="";
 }
-function getFormData() {
-  const items = [];
-  $$(".item-group").forEach(group => {
-    $$(".line-row", group).forEach(row => {
-      const description = $(".line-description", row).textContent.trim();
-      const quantityRaw = $(".line-quantity", row).value;
-      const unitText = $(".line-unit", row).textContent.trim();
-      const unit = unitText === "—" ? "" : unitText;
-      if (quantityRaw === "") return;
-      if (!description && !unit) return;
-      items.push({
-        category: group.dataset.category,
-        description,
-        quantity: numberValue(quantityRaw),
-        unit
-      });
-    });
+function collectForm() {
+  const items=[];
+  $$(".line-row").forEach(row=>{
+    const raw=$(".line-quantity",row).value;
+    if(raw!=="") items.push({category:row.dataset.category,description:row.dataset.description,unit:row.dataset.unit,quantity:num(raw)});
   });
-  return {
-    id: editingId || uid(),
-    date: $("#date").value,
-    center: $("#center").value.trim(),
-    cook: $("#cook").value.trim(),
-    breakfasts: numberValue($("#breakfasts").value),
-    mealsServed: numberValue($("#mealsServed").value),
-    menu: $("#menu").value.trim(),
-    water: $("#water").value.trim(),
-    fruit: $("#fruit").value.trim(),
-    items
-  };
+  return {id:editingId||uid(),date:$("#date").value,center:$("#center").value.trim(),cook:$("#cook").value.trim(),breakfasts:num($("#breakfasts").value),mealsServed:num($("#mealsServed").value),menu:$("#menu").value.trim(),water:$("#water").value.trim(),fruit:$("#fruit").value.trim(),items};
 }
-function validate(log) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(log.date)) return "Selecciona una fecha válida.";
-  if (!log.center) return "Escribe el nombre del centro.";
-  if (log.breakfasts !== "" && (!Number.isFinite(log.breakfasts) || log.breakfasts < 0)) return "Revisa la cantidad de desayunos.";
-  if (log.mealsServed !== "" && (!Number.isFinite(log.mealsServed) || log.mealsServed < 0)) return "Revisa la cantidad de comidas.";
-  for (const item of log.items) {
-    if (!item.description) return "Completa la descripción de cada insumo que tenga cantidad o unidad.";
-    if (item.quantity !== "" && (!Number.isFinite(item.quantity) || item.quantity < 0)) return "Las cantidades deben ser números iguales o mayores que cero.";
-  }
+function validateLog(log) {
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(log.date)) return "Selecciona una fecha válida.";
+  if(!log.center) return "Escribe el nombre del centro.";
+  for(const key of ["breakfasts","mealsServed"]) if(log[key]!==""&&(!Number.isFinite(log[key])||log[key]<0)) return "Las cantidades de desayunos y comidas deben ser números iguales o mayores que cero.";
+  for(const item of log.items) if(!Number.isFinite(item.quantity)||item.quantity<0) return "Las cantidades de los insumos deben ser números iguales o mayores que cero.";
   return "";
 }
+async function submitLog(event) {
+  event.preventDefault(); const log=collectForm(); const error=validateLog(log); if(error)return notify(error,true);
+  const duplicate=logs.find(item=>item.date===log.date&&item.id!==editingId);
+  if(duplicate) { const ok=await askConfirm("Ya existe un registro para esa fecha","¿Deseas reemplazar el registro del "+prettyDate(log.date)+" con los datos actuales?","Reemplazar"); if(!ok)return; logs=logs.filter(item=>item.id!==duplicate.id); }
+  if(editingId) logs=logs.map(item=>item.id===editingId?log:item); else logs.push(log);
+  if(persist()){clearForm();showView("historial");notify("Registro guardado correctamente.");}
+}
 function editLog(id) {
-  const log = logs.find(item => item.id === id);
-  if (!log) return;
-  editingId = id;
-  $("#date").value = log.date;
-  $("#center").value = log.center || "";
-  $("#cook").value = log.cook || "";
-  $("#breakfasts").value = log.breakfasts ?? "";
-  $("#mealsServed").value = log.mealsServed ?? "";
-  $("#menu").value = log.menu || "";
-  $("#water").value = log.water || "";
-  $("#fruit").value = log.fruit || "";
-  $("#itemGroups").innerHTML = CATEGORIES.map(category => categoryMarkup(category, log.items.filter(item => item.category === category.id))).join("");
-  $("#formHeading").textContent = `Editar registro · ${dateLabel(log.date)}`;
-  $("#saveLog").textContent = "Guardar cambios";
-  $("#date").scrollIntoView({ behavior:"smooth", block:"center" });
+  const log=logs.find(item=>item.id===id);if(!log)return;
+  editingId=id;$("#date").value=log.date;$("#center").value=log.center||CENTER_DEFAULT;$("#cook").value=log.cook||"";
+  $("#breakfasts").value=log.breakfasts??"";$("#mealsServed").value=log.mealsServed??"";$("#menu").value=log.menu||"";$("#water").value=log.water||"";$("#fruit").value=log.fruit||"";
+  $("#formHeading").textContent="Editar registro · "+prettyDate(log.date);$("#saveLog").innerHTML='Guardar cambios <span>→</span>';
+  renderCatalog(log.items);showView("registro");window.scrollTo({top:0,behavior:"smooth"});
 }
-function render() {
-  const sorted = [...logs].sort((a,b) => b.date.localeCompare(a.date));
-  $("#statDays").textContent = logs.length;
-  $("#statItems").textContent = logs.reduce((sum, log) => sum + log.items.length, 0);
-  $("#statCenters").textContent = new Set(logs.map(log => log.center).filter(Boolean)).size;
-  $("#recordsCount").textContent = `${logs.length} registro${logs.length === 1 ? "" : "s"}`;
-  const query = ($("#search").value || "").trim().toLocaleLowerCase("es-MX");
-  const month = $("#monthFilter").value;
-  const filtered = sorted.filter(log => (!month || log.date.startsWith(month)) &&
-    (!query || [log.date, log.center, log.cook, log.menu, ...log.items.map(i => i.description)].join(" ").toLocaleLowerCase("es-MX").includes(query)));
-  $("#recordsList").innerHTML = filtered.length ? filtered.map(log => `
-    <article class="record-card">
-      <div class="record-date"><span>${escapeHTML(dateLabel(log.date))}</span><strong>${escapeHTML(log.center || "Centro sin nombre")}</strong><small>${log.items.length} insumos · ${escapeHTML(log.cook || "Sin encargado")}</small></div>
-      <div class="record-menu"><span class="eyebrow">MENÚ</span><p>${escapeHTML(log.menu || "Sin menú registrado")}</p><small>Desayunos: ${log.breakfasts === "" ? "—" : escapeHTML(log.breakfasts)} · Comidas: ${log.mealsServed === "" ? "—" : escapeHTML(log.mealsServed)}</small></div>
-      <div class="record-actions"><button class="button secondary edit-log" data-id="${escapeHTML(log.id)}">Editar</button><button class="button danger delete-log" data-id="${escapeHTML(log.id)}">Eliminar</button></div>
-    </article>`).join("") : '<div class="empty"><h3>No hay registros que mostrar</h3><p>Agrega un registro o cambia los filtros.</p></div>';
+async function deleteLog(id) {
+  const log=logs.find(item=>item.id===id);if(!log)return;
+  if(!await askConfirm("Eliminar registro","Se eliminará el registro del "+prettyDate(log.date)+". Esta acción no se puede deshacer.","Eliminar"))return;
+  logs=logs.filter(item=>item.id!==id);persist();notify("Registro eliminado.");
 }
-$("#itemGroups").innerHTML = CATEGORIES.map(category => categoryMarkup(category)).join("");
-$("#date").value = todayISO();
-$("#monthFilter").value = todayISO().slice(0, 7);
-// El botón Nuevo registro se conecta al sistema de vistas al final del archivo.
-$("#logForm").addEventListener("submit", event => {
-  event.preventDefault();
-  const log = getFormData();
-  const issue = validate(log);
-  if (issue) return notify(issue, true);
-  const duplicate = logs.find(item => item.date === log.date && item.id !== editingId);
-  if (duplicate && !confirm("Ya existe un registro para esa fecha. ¿Quieres reemplazarlo con estos datos?")) return;
-  if (duplicate) logs = logs.filter(item => item.id !== duplicate.id);
-  if (editingId) logs = logs.map(item => item.id === editingId ? log : item);
-  else logs.push(log);
-  if (save()) {
-    clearForm();
-    notify("Registro guardado correctamente.");
-    $("#records").scrollIntoView({ behavior:"smooth", block:"start" });
-  }
-});
-$("#itemGroups").addEventListener("click", event => {
-  const add = event.target.closest(".add-line");
-  if (add) {
-    $(".line-list", add.closest(".item-group")).insertAdjacentHTML("beforeend", lineMarkup());
-    $(".line-description", $(".line-list", add.closest(".item-group")).lastElementChild).focus();
-  }
-  const remove = event.target.closest(".remove-line");
-  if (remove) {
-    const list = remove.closest(".line-list");
-    if (list.children.length === 1) {
-      $$(".line-row input", list).forEach(input => input.value = "");
-    } else remove.closest(".line-row").remove();
-  }
-});
-$("#recordsList").addEventListener("click", event => {
-  const edit = event.target.closest(".edit-log");
-  if (edit) return editLog(edit.dataset.id);
-  const del = event.target.closest(".delete-log");
-  if (del) {
-    const log = logs.find(item => item.id === del.dataset.id);
-    if (log && confirm(`¿Eliminar el registro del ${dateLabel(log.date)}? Esta acción no se puede deshacer.`)) {
-      logs = logs.filter(item => item.id !== log.id);
-      save();
-      notify("Registro eliminado.");
-    }
-  }
-});
-$("#search").addEventListener("input", render);
-$("#monthFilter").addEventListener("change", render);
-
-$("#exportExcel").addEventListener("click", () => {
-  if (!logs.length) return notify("Todavía no hay registros para exportar.", true);
+function renderHistory() {
+  const query=$("#search").value.trim().toLocaleLowerCase("es-MX"),month=$("#monthFilter").value;
+  const sorted=[...logs].sort((a,b)=>b.date.localeCompare(a.date));
+  const filtered=sorted.filter(log=>(!month||log.date.startsWith(month))&&(!query||[log.date,log.center,log.cook,log.menu,log.water,log.fruit,...log.items.map(i=>i.description)].join(" ").toLocaleLowerCase("es-MX").includes(query)));
+  $("#recordsCount").textContent=filtered.length+" registro"+(filtered.length===1?"":"s");
+  $("#recordsSubtitle").textContent=month?"Mostrando "+monthLabel(month):"Registros organizados por fecha";
+  $("#recordsList").innerHTML=filtered.length?filtered.map(log=>'<article class="record-card"><div class="record-date"><span>'+esc(prettyDate(log.date))+'</span><strong>'+esc(log.center||"Centro sin nombre")+'</strong><small>'+log.items.length+' insumos · '+esc(log.cook||"Sin encargado")+'</small></div><div class="record-menu"><div class="eyebrow">MENÚ</div><p>'+esc(log.menu||"Sin menú registrado")+'</p><small>Desayunos: '+(log.breakfasts===""?"—":esc(log.breakfasts))+' · Comidas: '+(log.mealsServed===""?"—":esc(log.mealsServed))+'</small></div><div class="record-actions"><button class="button button-quiet edit-log" data-id="'+esc(log.id)+'" type="button">Editar</button><button class="button delete-log" data-id="'+esc(log.id)+'" type="button">Eliminar</button></div></article>').join(""):'<div class="empty"><h3>No hay registros que mostrar</h3><p>Agrega un registro o modifica los filtros de búsqueda.</p></div>';
+}
+function renderStats() {
+  $("#statDays").textContent=logs.length;
+  $("#statItems").textContent=logs.reduce((sum,log)=>sum+log.items.length,0);
+  const latest=[...logs].sort((a,b)=>b.date.localeCompare(a.date))[0];
+  $("#statLastDate").textContent=latest?prettyDate(latest.date):"—";
+}
+function renderExport() {
+  const month=$("#exportMonth").value||todayISO().slice(0,7);
+  const monthLogs=logs.filter(log=>log.date.startsWith(month)).sort((a,b)=>a.date.localeCompare(b.date));
+  $("#exportCount").textContent=monthLogs.length;
+  $("#monthPreview").innerHTML=monthLogs.length?monthLogs.map(log=>'<div class="preview-day"><span>'+esc(prettyDate(log.date))+'</span><strong>'+log.items.length+' insumos</strong><em>Registrado</em></div>').join(""):'<div class="empty"><h3>Sin registros para este mes</h3><p>Cuando guardes registros, aparecerán aquí.</p></div>';
+  $("#exportExcel").disabled=monthLogs.length===0;
+}
+function renderAll(){renderStats();renderHistory();renderExport();}
+function showView(view) {
+  const titles={registro:"Nuevo registro",historial:"Historial",concentrado:"Concentrado mensual"};
+  if(!titles[view])view="registro";
+  $$(".view").forEach(node=>{const active=node.id==="view-"+view;node.hidden=!active;node.classList.toggle("active",active);});
+  $$(".nav-link").forEach(node=>{const active=node.dataset.view===view;node.classList.toggle("active",active);if(active)node.setAttribute("aria-current","page");else node.removeAttribute("aria-current");});
+  $("#breadcrumbCurrent").textContent=titles[view];$("#addNew").hidden=view==="registro";
+  $("#sidebar").classList.remove("open");
+  if(location.hash!=="#"+view)history.replaceState({view},"","#"+view);
+  window.scrollTo({top:0,behavior:"auto"});
+}
+function downloadBlob(blob,filename) {
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function exportExcel() {
+  const month=$("#exportMonth").value||todayISO().slice(0,7);const monthLogs=logs.filter(log=>log.date.startsWith(month));
+  if(!monthLogs.length)return notify("No hay registros para "+monthLabel(month)+".",true);
   try {
-    const month = $("#monthFilter").value || todayISO().slice(0, 7);
-    const workbookBytes = buildFoodLogXlsx(logs, month, CATALOG);
-    const blob = new Blob([workbookBytes], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "YEXCEL-registro-alimentos-" + month + ".xlsx";
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-    notify("Archivo .xlsx generado: concentrado mensual y registros diarios.");
-  } catch (error) {
-    console.error("YEXCEL export error:", error);
-    notify(error?.message || "No se pudo generar el archivo de Excel.", true);
-  }
-});
-$("#exportBackup").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify({format:"yexcel-food-logs",version:1,exportedAt:new Date().toISOString(),logs},null,2)],{type:"application/json;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href=url; a.download="yexcel-respaldo-alimentos.json"; document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  notify("Respaldo JSON descargado.");
-});
-$("#importBackup").addEventListener("change", async event => {
-  const file = event.target.files?.[0]; event.target.value = "";
-  if (!file) return;
-  if (file.size > 5_000_000) return notify("El archivo supera el límite de 5 MB.", true);
+    const bytes=buildFoodLogXlsx(logs,month,CATALOG);
+    downloadBlob(new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),"YEXCEL-registro-alimentos-"+month+".xlsx");
+    notify("Archivo Excel generado. Revisa las sumas y el formato antes de imprimir.");
+  } catch(error){console.error(error);notify(error?.message||"No se pudo generar el archivo Excel.",true);}
+}
+function exportBackup() {
+  const data={format:"yexcel-food-logs",version:1,exportedAt:new Date().toISOString(),logs};
+  downloadBlob(new Blob([JSON.stringify(data,null,2)],{type:"application/json;charset=utf-8"}),"yexcel-respaldo-alimentos.json");
+  notify("Respaldo descargado.");
+}
+async function importBackup(event) {
+  const file=event.target.files?.[0];event.target.value="";if(!file)return;
+  if(file.size>5000000)return notify("El archivo supera el límite de 5 MB.",true);
   try {
-    const parsed = JSON.parse(await file.text());
-    if (parsed?.format !== "yexcel-food-logs" || parsed.version !== 1 || !Array.isArray(parsed.logs) ||
-        parsed.logs.some(log => !log || typeof log.id !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(log.date) || !Array.isArray(log.items))) {
-      return notify("El archivo no es un respaldo YEXCEL válido.", true);
-    }
-    if (!confirm(`Se reemplazarán ${logs.length} registros actuales por ${parsed.logs.length} registros del respaldo. ¿Continuar?`)) return;
-    const previous = logs;
-    logs = parsed.logs;
-    if (!save()) logs = previous;
-    else notify("Respaldo restaurado.");
-  } catch { notify("No se pudo leer el respaldo JSON.", true); }
-});
-$("#clearForm").addEventListener("click", clearForm);
-render();
-
-const viewCopy = {
-  registro: { title: "Capturar registro", subtitle: "Llena la hoja del día sin volver a escribir los nombres de los insumos." },
-  records: { title: "Historial de registros", subtitle: "Busca, revisa y corrige registros guardados en este dispositivo." },
-  export: { title: "Exportar a Excel", subtitle: "Genera el archivo organizado para continuar el trabajo en Excel." }
-};
-function showView(view, { updateAddress = true, scrollTop = true } = {}) {
-  if (!viewCopy[view]) view = "registro";
-
-  // Cada opción del menú muestra una sola pantalla funcional.
-  const screenIds = ["registro", "records", "export"];
-  screenIds.forEach(id => {
-    const section = document.getElementById(id);
-    if (section) {
-      section.hidden = id !== view;
-      section.setAttribute("aria-hidden", id === view ? "false" : "true");
-    }
-  });
-
-  document.querySelectorAll(".nav-link[data-view]").forEach(button => {
-    const active = button.dataset.view === view;
-    button.classList.toggle("active", active);
-    if (active) button.setAttribute("aria-current", "page");
-    else button.removeAttribute("aria-current");
-  });
-
-  $("#pageTitle").textContent = viewCopy[view].title;
-  $(".topbar .subtitle").textContent = viewCopy[view].subtitle;
-  $(".stats").hidden = view !== "registro";
-  $("#addNew").hidden = view !== "registro";
-
-  // La navegación cambia la vista y la dirección; no desplaza a una sección larga.
-  if (updateAddress && location.hash !== "#" + view) {
-    history.pushState({ view }, "", "#" + view);
-  }
-  if (scrollTop) window.scrollTo({ top: 0, behavior: "auto" });
+    const parsed=JSON.parse(await file.text());
+    if(parsed?.format!=="yexcel-food-logs"||parsed.version!==1||!Array.isArray(parsed.logs)||parsed.logs.some(log=>!log||typeof log.id!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(log.date)||!Array.isArray(log.items)))return notify("El archivo no es un respaldo YEXCEL válido.",true);
+    if(!await askConfirm("Restaurar respaldo","Se reemplazarán "+logs.length+" registros actuales por "+parsed.logs.length+" registros del respaldo.","Restaurar"))return;
+    const old=logs;logs=parsed.logs;if(!persist())logs=old;else notify("Respaldo restaurado correctamente.");
+  } catch {notify("No se pudo leer el archivo de respaldo.",true);}
 }
 
-document.querySelectorAll(".nav-link[data-view]").forEach(button => {
-  button.addEventListener("click", event => {
-    event.preventDefault();
-    showView(button.dataset.view);
-  });
-});
-window.addEventListener("popstate", () => showView(location.hash.slice(1), { updateAddress: false }));
-window.addEventListener("hashchange", () => showView(location.hash.slice(1), { updateAddress: false }));
-$("#addNew").addEventListener("click", () => {
-  clearForm();
-  showView("registro");
-  $("#formHeading").textContent = "Nuevo registro de alimentos";
-  $("#date").focus({ preventScroll: true });
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
-const initialView = location.hash.slice(1);
-showView(viewCopy[initialView] ? initialView : "registro", { updateAddress: false, scrollTop: false });
-
+$("#logForm").addEventListener("submit",submitLog);
+$("#itemGroups").addEventListener("input",event=>{if(event.target.matches(".line-quantity"))event.target.classList.toggle("has-value",event.target.value!=="");});
+$("#catalogSearch").addEventListener("input",filterCatalog);
+$("#clearForm").addEventListener("click",clearForm);
+$("#search").addEventListener("input",renderHistory);
+$("#monthFilter").addEventListener("change",renderHistory);
+$("#clearFilters").addEventListener("click",()=>{$("#search").value="";$("#monthFilter").value="";renderHistory();});
+$("#exportMonth").addEventListener("change",renderExport);
+$("#exportExcel").addEventListener("click",exportExcel);
+$("#exportBackup").addEventListener("click",exportBackup);
+$("#importBackup").addEventListener("change",importBackup);
+$("#addNew").addEventListener("click",()=>{clearForm();showView("registro");$("#date").focus({preventScroll:true});});
+$$(".nav-link").forEach(button=>button.addEventListener("click",()=>showView(button.dataset.view)));
+$("#mobileMenu").addEventListener("click",()=>$("#sidebar").classList.toggle("open"));
+$("#dialogCancel").addEventListener("click",()=>closeDialog(false));
+$("#dialogConfirm").addEventListener("click",()=>closeDialog(true));
+$("#confirmDialog").addEventListener("click",event=>{if(event.target.id==="confirmDialog")closeDialog(false);});
+window.addEventListener("keydown",event=>{if(event.key==="Escape"&&!$("#confirmDialog").hidden)closeDialog(false);if(event.key==="Escape")$("#sidebar").classList.remove("open");});
+window.addEventListener("hashchange",()=>showView(location.hash.slice(1)));
+$("#date").value=todayISO();$("#monthFilter").value=todayISO().slice(0,7);$("#exportMonth").value=todayISO().slice(0,7);
+$("#todayLabel").textContent=new Date().toLocaleDateString("es-MX",{weekday:"short",day:"numeric",month:"short"});
+renderCatalog();renderAll();
+const firstView=location.hash.replace("#","");if(["registro","historial","concentrado"].includes(firstView))showView(firstView);
