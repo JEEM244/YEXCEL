@@ -1,0 +1,20 @@
+[
+  {
+    "id": "fixture-1",
+    "date": "2026-10-27",
+    "type": "Desayuno",
+    "food": "Avena con plátano",
+    "time": "07:15",
+    "drink": "Agua",
+    "notes": ""
+  },
+  {
+    "id": "fixture-2",
+    "date": "2026-10-27",
+    "type": "Comida",
+    "food": "Arroz con pollo",
+    "time": "14:30",
+    "drink": "Agua natural",
+    "notes": "Ejemplo de prueba, sin datos personales"
+  }
+]
