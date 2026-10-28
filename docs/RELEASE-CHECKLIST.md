@@ -10,3 +10,8 @@
 - [ ] Documentar cómo hacer copia de seguridad.
 - [ ] Confirmar si se necesita despliegue en GitHub Pages.
 - [ ] No anunciar soporte multiusuario sin servidor y autenticación.
+
+- [ ] Confirmar que el workflow de GitHub Actions termina con éxito.
+- [ ] Verificar restauración con archivo JSON válido e inválido.
+- [ ] Asegurar que se hicieron respaldos antes de reemplazar registros.
+- [ ] Actualizar la versión indicada en README y CHANGELOG si cambia el alcance.
