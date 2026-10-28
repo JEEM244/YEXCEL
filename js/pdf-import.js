@@ -79,6 +79,7 @@ function getQuantityForItem(text, description) {
 
 async function extractPdfText(pdf, pdfjs, onProgress) {
   const pages = [];
+  const needsOCR = [];
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     const page = await pdf.getPage(pageNumber);
     const content = await page.getTextContent();
@@ -90,24 +91,24 @@ async function extractPdfText(pdf, pdfjs, onProgress) {
       line.push({ x: item.transform?.[4] ?? 0, text: item.str.trim() });
       rows.set(y, line);
     }
-    pages.push([...rows.entries()].sort((a,b) => b[0]-a[0])
+    const pageText = [...rows.entries()].sort((a,b) => b[0]-a[0])
       .map(([,items]) => items.sort((a,b) => a.x-b.x).map(item => item.text).join("  "))
-      .join("\n"));
+      .join("\n");
+    pages.push(pageText);
+    if (pageText.replace(/\s/g, "").length <= 30) needsOCR.push(pageNumber - 1);
   }
-  let text = pages.join("\n");
-  if (text.replace(/\s/g, "").length > 30) return { text, ocr: false };
+  if (!needsOCR.length) return { pages, ocr: false };
 
-  // Scanned PDFs have no selectable text. Render each page and use Spanish OCR.
-  onProgress?.("El PDF es un escaneo. Activando reconocimiento de texto (OCR en español)…");
+  onProgress?.("El PDF contiene páginas escaneadas. Activando reconocimiento OCR en español…");
   let tesseract = window.Tesseract;
   if (typeof tesseract?.createWorker !== "function") {
     try {
       await new Promise((resolve, reject) => {
         const existing = document.querySelector('script[data-yexcel-tesseract="true"]');
+        if (existing && window.Tesseract?.createWorker) return resolve();
         if (existing) {
           existing.addEventListener("load", resolve, { once: true });
           existing.addEventListener("error", () => reject(new Error("script load failed")), { once: true });
-          if (window.Tesseract?.createWorker) resolve();
           return;
         }
         const script = document.createElement("script");
@@ -133,33 +134,32 @@ async function extractPdfText(pdf, pdfjs, onProgress) {
     workerBlobURL: true,
     logger: message => {
       if (message.status === "recognizing text") {
-        const percent = Math.round((message.progress || 0) * 100);
-        onProgress?.("Aplicando OCR en español… " + percent + "%");
+        onProgress?.("Aplicando OCR en español… " + Math.round((message.progress || 0) * 100) + "%");
       }
     }
   });
   try {
-    const ocrPages = [];
-    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-      onProgress?.("Reconociendo página " + pageNumber + " de " + pdf.numPages + "…");
-      const page = await pdf.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: 2.2 });
+    for (const index of needsOCR) {
+      onProgress?.("Reconociendo página " + (index + 1) + " de " + pdf.numPages + "…");
+      const page = await pdf.getPage(index + 1);
+      const viewport = page.getViewport({ scale: 2.5 });
       const canvas = document.createElement("canvas");
       canvas.width = Math.ceil(viewport.width);
       canvas.height = Math.ceil(viewport.height);
       const context = canvas.getContext("2d", { willReadFrequently: true });
       await page.render({ canvasContext: context, viewport }).promise;
       const result = await worker.recognize(canvas);
-      ocrPages.push(result.data.text || "");
+      pages[index] = result.data.text || "";
       canvas.width = 0;
       canvas.height = 0;
     }
-    text = ocrPages.join("\n");
   } finally {
     await worker.terminate();
   }
-  if (!text.replace(/\s/g, "").length) throw new Error("No se pudo reconocer texto en el PDF. Intenta subir una foto o un escaneo más nítido.");
-  return { text, ocr: true };
+  if (!pages.some(pageText => pageText.replace(/\s/g, "").length)) {
+    throw new Error("No se pudo reconocer texto en el PDF. Intenta subir un escaneo más nítido.");
+  }
+  return { pages, ocr: true };
 }
 
 export async function parseFoodLogPdf(file, catalog, onProgress) {
@@ -171,28 +171,50 @@ export async function parseFoodLogPdf(file, catalog, onProgress) {
   pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
   const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
   const extracted = await extractPdfText(pdf, pdfjs, onProgress);
-  const text = extracted.text;
-  const date = findDate(text);
-  const center = extractLabeledValue(text, ["centro(?: / casa club)?", "casa club", "nombre del centro"]) || (normalize(text).includes("caminando juntos") ? "Casa club: Caminando Juntos" : "");
-  const cook = extractLabeledValue(text, ["encargado(?: de cocina)?", "responsable de cocina", "cocinero(?:a)?"]);
-  const breakfasts = extractLabeledValue(text, ["desayunos otorgados", "desayunos"]);
-  const mealsServed = extractLabeledValue(text, ["comidas otorgadas", "comidas servidas", "comidas"]);
-  const menu = extractLabeledValue(text, ["men[uú]", "platillo"]);
-  const water = extractLabeledValue(text, ["agua", "bebida"]);
-  const fruit = extractLabeledValue(text, ["fruta del d[ií]a", "fruta"]);
-  const items = [];
-  for (const category of catalog || []) {
-    for (const [description, unit] of category.items || []) {
-      const quantity = getQuantityForItem(text, description);
-      if (quantity !== null) items.push({ category: category.id, description, unit, quantity });
-    }
-  }
   const numberOrBlank = value => {
     const match = String(value).match(/\d+(?:[.,]\d+)?/);
     return match ? parseQuantity(match[0]) : "";
   };
+  const records = extracted.pages.map((text, index) => {
+    const date = findDate(text);
+    const center = extractLabeledValue(text, ["centro(?: / casa club)?", "casa club", "nombre del centro"]) ||
+      (normalize(text).includes("caminando juntos") ? "Casa club: Caminando Juntos" : "");
+    const cook = extractLabeledValue(text, ["encargado(?: de cocina)?", "responsable de cocina", "cocinero(?:a)?"]);
+    const breakfasts = extractLabeledValue(text, ["desayunos otorgados", "desayunos"]);
+    const mealsServed = extractLabeledValue(text, ["comidas otorgadas", "comidas servidas", "comidas"]);
+    const menu = extractLabeledValue(text, ["men[uú]", "platillo"]);
+    const water = extractLabeledValue(text, ["agua", "bebida"]);
+    const fruit = extractLabeledValue(text, ["fruta del d[ií]a", "fruta"]);
+    const items = [];
+    for (const category of catalog || []) {
+      for (const [description, unit] of category.items || []) {
+        const quantity = getQuantityForItem(text, description);
+        if (quantity !== null) items.push({ category: category.id, description, unit, quantity });
+      }
+    }
+    const fields = {
+      date, center, cook,
+      breakfasts: numberOrBlank(breakfasts),
+      mealsServed: numberOrBlank(mealsServed),
+      menu, water, fruit
+    };
+    const fieldCount = Object.values(fields).filter(value => value !== "" && value != null).length;
+    return { pageNumber: index + 1, fields, items, hasData: fieldCount > 0 || items.length > 0 };
+  }).filter(record => record.hasData);
+
+  if (!records.length) {
+    throw new Error("No se detectaron datos en ninguna página. Revisa la calidad del escaneo.");
+  }
+  const fallbackDate = records.find(record => record.fields.date)?.fields.date || "";
+  const fallbackCenter = records.find(record => record.fields.center)?.fields.center || "Casa club: Caminando Juntos";
+  for (const record of records) {
+    if (!record.fields.date) record.fields.date = fallbackDate;
+    if (!record.fields.center) record.fields.center = fallbackCenter;
+  }
   return {
-    fields: { date, center, cook, breakfasts: numberOrBlank(breakfasts), mealsServed: numberOrBlank(mealsServed), menu, water, fruit },
-    items, pageCount: pdf.numPages, usedOCR: extracted.ocr
+    records,
+    pageCount: pdf.numPages,
+    usedOCR: extracted.ocr,
+    skippedPages: pdf.numPages - records.length
   };
 }
