@@ -94,9 +94,10 @@ function getFormData() {
   const items = [];
   $$(".item-group").forEach(group => {
     $$(".line-row", group).forEach(row => {
-      const description = $(".line-description", row).value.trim();
+      const description = $(".line-description", row).textContent.trim();
       const quantityRaw = $(".line-quantity", row).value;
-      const unit = $(".line-unit", row).value.trim();
+      const unitText = $(".line-unit", row).textContent.trim();
+      const unit = unitText === "—" ? "" : unitText;
       if (quantityRaw === "") return;
       if (!description && !unit) return;
       items.push({
