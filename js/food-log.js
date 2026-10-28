@@ -1,4 +1,5 @@
 import { buildFoodLogXlsx } from "./xlsx-export.js";
+import { parseFoodLogPdf } from "./pdf-import.js";
 const KEY = "yexcelFoodLogsV1";
 const CATEGORIES = [
   { id: "desayuno", label: "Desayuno" },
@@ -276,6 +277,59 @@ $("#importBackup").addEventListener("change", async event => {
     else notify("Respaldo restaurado.");
   } catch { notify("No se pudo leer el respaldo JSON.", true); }
 });
+
+$("#pdfFile").addEventListener("change", event => {
+  const file = event.target.files?.[0];
+  $("#pdfFileName").textContent = file ? file.name : "Ningún archivo seleccionado";
+  $("#pdfImportStatus").textContent = file ? "PDF listo. Pulsa “Extraer y llenar datos”." : "Funciona con PDF que contienen texto seleccionable; los PDF escaneados requieren OCR.";
+  $("#pdfImportStatus").classList.remove("error");
+});
+$("#parsePdf").addEventListener("click", async () => {
+  const file = $("#pdfFile").files?.[0];
+  if (!file) return notify("Selecciona primero un archivo PDF.", true);
+  const button = $("#parsePdf");
+  button.disabled = true;
+  button.textContent = "Extrayendo…";
+  $("#pdfImportStatus").textContent = "Leyendo el PDF y buscando los campos del registro…";
+  $("#pdfImportStatus").classList.remove("error");
+  try {
+    const result = await parseFoodLogPdf(file, CATALOG);
+    const fields = result.fields;
+    if (fields.date) $("#date").value = fields.date;
+    if (fields.center) $("#center").value = fields.center;
+    if (fields.cook) $("#cook").value = fields.cook;
+    if (fields.breakfasts !== "" && Number.isFinite(fields.breakfasts)) $("#breakfasts").value = fields.breakfasts;
+    if (fields.mealsServed !== "" && Number.isFinite(fields.mealsServed)) $("#mealsServed").value = fields.mealsServed;
+    if (fields.menu) $("#menu").value = fields.menu;
+    if (fields.water) $("#water").value = fields.water;
+    if (fields.fruit) $("#fruit").value = fields.fruit;
+    if (result.items.length) {
+      const imported = new Map(result.items.map(item => [item.description.toLocaleLowerCase("es-MX"), item]));
+      $(".line-row").forEach(row => {
+        const description = $(".line-description", row).textContent.trim().toLocaleLowerCase("es-MX");
+        const item = imported.get(description);
+        if (item) $(".line-quantity", row).value = item.quantity;
+      });
+    }
+    const filled = Object.values(fields).filter(value => value !== "" && value != null).length + result.items.length;
+    if (!filled) {
+      $("#pdfImportStatus").textContent = "Se leyó el PDF, pero no se reconocieron campos con suficiente certeza. Revisa que corresponda al formato de registro de alimentos.";
+      $("#pdfImportStatus").classList.add("error");
+      return notify("No se detectaron datos reconocibles en el PDF.", true);
+    }
+    $("#pdfImportStatus").textContent = `Extracción terminada: ${result.pageCount} página(s), ${filled} dato(s) detectado(s). Revisa los campos y guarda el registro cuando estén correctos.`;
+    notify("Datos extraídos. Revísalos antes de guardar.");
+  } catch (error) {
+    console.error("YEXCEL PDF import error:", error);
+    $("#pdfImportStatus").textContent = error?.message || "No se pudo procesar el PDF.";
+    $("#pdfImportStatus").classList.add("error");
+    notify(error?.message || "No se pudo procesar el PDF.", true);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Extraer y llenar datos";
+  }
+});
+
 $("#clearForm").addEventListener("click", clearForm);
 render();
 
