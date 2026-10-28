@@ -14,15 +14,15 @@
     <aside class="sidebar">
       <a class="brand" href="#" aria-label="YEXCEL inicio">YEXCEL<span>.</span><small>REGISTRO DE ALIMENTOS</small></a>
       <nav aria-label="Navegación principal">
-        <a class="nav-link active" href="#registro"><span>＋</span> Capturar registro</a>
-        <a class="nav-link" href="#records"><span>▤</span> Historial</a>
-        <a class="nav-link" href="#export"><span>⇩</span> Exportar a Excel</a>
+        <button class="nav-link active" type="button" data-view="registro"><span>＋</span> Capturar registro</button>
+        <button class="nav-link" type="button" data-view="records"><span>▤</span> Historial</button>
+        <button class="nav-link" type="button" data-view="export"><span>⇩</span> Exportar a Excel</button>
       </nav>
       <div class="sidebar-note"><span class="status-dot"></span> <span id="storageState">Guardado en este navegador</span><small>Los datos se guardan localmente en este dispositivo.</small></div>
     </aside>
     <main>
       <header class="topbar">
-        <div><p class="eyebrow">CONTROL DE COCINA · DIF</p><h1>Registro de alimentos</h1><p class="subtitle">Captura los datos de la hoja física y genera el concentrado para Excel.</p></div>
+        <div><p class="eyebrow">CONTROL DE COCINA · DIF</p><h1 id="pageTitle">Capturar registro</h1><p class="subtitle">Captura los datos de la hoja física y genera el concentrado para Excel.</p></div>
         <button id="addNew" class="button primary" type="button">＋ Nuevo registro</button>
       </header>
 
