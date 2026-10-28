@@ -22,3 +22,6 @@
 - Recargar, bloquear almacenamiento y verificar mensajes.
 
 No marcar una prueba como aprobada hasta ejecutarla en un navegador o en el runner de pruebas correspondiente.
+
+## Runner automatizado y fixtures
+Ejecuta `npm run check` y `npm test` con Node.js 20+. Los archivos JSON de `tests/fixtures/` cubren un respaldo válido y uno inválido. El workflow de GitHub Actions corre estos pasos en las ramas configuradas; revisar su resultado antes de dar la entrega por finalizada.
