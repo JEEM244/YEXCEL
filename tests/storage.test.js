@@ -56,3 +56,12 @@ test("normalizeMeals rejects data above the configured record limit", () => {
   assert.equal(result.valid, false);
   assert.match(result.error, /10000/);
 });
+
+test("loadMeals and saveMeals do not throw when storage access fails", () => {
+  const broken = {
+    getItem() { throw new Error("blocked"); },
+    setItem() { throw new Error("blocked"); }
+  };
+  assert.equal(loadMeals(broken).ok, false);
+  assert.equal(saveMeals([meal], broken).ok, false);
+});
