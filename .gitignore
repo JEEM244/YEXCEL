@@ -1,0 +1,13 @@
+# Dependencies and local runtime files
+node_modules/
+coverage/
+.DS_Store
+Thumbs.db
+*.log
+
+# Local backups and test artifacts
+*.local.json
+*.backup.csv
+.env
+.env.*
+!.env.example

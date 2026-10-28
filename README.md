@@ -1,34 +1,48 @@
 # YEXCEL
 
-Prototipo web para registrar comidas por fecha, consultar un historial y exportar los datos a un archivo CSV compatible con Excel.
+Prototipo web YEXCEL 0.3.0 para registrar comidas por fecha, consultar un historial, editar datos y exportar CSV o respaldo JSON.
 
-## Estructura
+## Estructura del proyecto
 
 ```text
 YEXCEL/
-├── index.html       # Estructura de la interfaz
-├── css/
-│   └── styles.css   # Estilos, diseño responsive y tema visual
+├── index.html
+├── css/styles.css
 ├── js/
-│   └── app.js       # Calendario, formularios, historial y exportación
-└── README.md
+│   ├── app.js
+│   ├── utils.js
+│   ├── storage.js
+│   └── export.js
+├── tests/
+├── docs/
+└── package.json
 ```
 
-## Cómo ejecutarlo
+## Ejecutar
 
-1. Descarga o clona el repositorio.
-2. Abre `index.html` en un navegador moderno.
-3. Registra comidas y navega entre las vistas desde el menú.
+Abre `index.html` en un navegador moderno. No se necesita servidor para el uso local básico. Para ejecutar pruebas de las funciones de datos necesitas Node.js 20 o superior:
 
-No necesita instalar dependencias ni usar un servidor para el funcionamiento básico.
+```sh
+npm test
+npm run check
+```
 
-## Datos y limitaciones actuales
+## Funciones del prototipo
 
-- Los registros se guardan en `localStorage` del navegador y equipo donde se usa la app.
-- Borrar los datos del navegador puede eliminar esos registros. Todavía no hay cuentas, sincronización ni respaldo automático.
-- La exportación actual genera un archivo CSV que puede abrir Excel; todavía no genera un libro XLSX nativo.
-- Los campos y encabezados son provisionales y deberán ajustarse cuando se reciba la plantilla del cliente.
+- Registro, edición y eliminación de comidas por fecha.
+- Calendario, historial, búsqueda y filtros por rango de fechas.
+- Almacenamiento local con intento de migración desde la versión anterior.
+- Exportación CSV compatible con Excel y neutralización básica de fórmulas en celdas.
+- Descarga y restauración de respaldo JSON versionado, con validación y confirmación.
 
-## Tecnologías
+## Pruebas y documentación
 
-HTML, CSS y JavaScript sin framework.
+Ejecuta `npm test` y `npm run check` con Node.js 20 o superior. Consulta `docs/MANUAL-QA.md` para las verificaciones que todavía necesitan un navegador real. La integración continua se configura en `.github/workflows/tests.yml`.
+
+La carpeta `docs/` reúne arquitectura, privacidad, modelo de datos, preguntas al cliente, formato CSV, respaldo, despliegue, solución de problemas y hoja de ruta.
+
+## Importante
+
+Los datos se guardan en el almacenamiento local del navegador actual. No hay cuentas, sincronización ni respaldo automático. Borrar datos del sitio puede hacer que se pierdan registros. Los encabezados de exportación todavía son provisionales: deben ajustarse a la plantilla exacta que entregue el cliente.
+
+Consulta `CHANGELOG.md` para este hito y `docs/MANUAL-QA.md` para las pruebas manuales pendientes.

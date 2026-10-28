@@ -1,22 +1,359 @@
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)], key='yexcelMealsV1';
-let meals=[];try{meals=JSON.parse(localStorage.getItem(key)||'[]');if(!Array.isArray(meals))meals=[]}catch{meals=[]}
-const now=new Date(),iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-let selected=iso(now),cursor=new Date(now.getFullYear(),now.getMonth(),1);
-const pretty=s=>{let [y,m,d]=s.split('-').map(Number);return d+' de '+months[m-1]+' de '+y},esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function toast(s){let t=$('#toast');t.textContent=s;t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),2400)}
-function save(){localStorage.setItem(key,JSON.stringify(meals));render()}
-function view(n){$$('.view').forEach(x=>x.classList.toggle('active',x.id==='view-'+n));$$('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===n));let l={inicio:['Tu espacio personal','Panel de control'],registro:['Organiza tus comidas','Registro diario'],historial:['Todos tus datos','Historial'],exportar:['Tus datos organizados','Exportar a Excel']}[n];$('#kicker').textContent=l[0];$('#title').textContent=l[1];render();scrollTo({top:0,behavior:'smooth'})}
-$$('[data-view]').forEach(b=>b.onclick=()=>view(b.dataset.view));$$('[data-goto]').forEach(b=>b.onclick=()=>view(b.dataset.goto));
-function open(){ $('#date').value=selected;$('#modalback').classList.add('open');setTimeout(()=>$('#food').focus(),50)}function close(){$('#modalback').classList.remove('open')}
-['#addMain','#openForm'].forEach(s=>$(s).onclick=open);$('#close').onclick=close;$('#cancel').onclick=close;$('#modalback').onclick=e=>{if(e.target===$('#modalback'))close()};document.onkeydown=e=>{if(e.key==='Escape')close()};
-$('#form').onsubmit=e=>{e.preventDefault();meals.push({id:Date.now().toString(36),date:$('#date').value,type:$('#type').value,food:$('#food').value.trim(),time:$('#time').value,drink:$('#drink').value.trim(),notes:$('#notes').value.trim()});selected=$('#date').value;cursor=new Date(+selected.slice(0,4),+selected.slice(5,7)-1,1);save();close();e.target.reset();view('registro');toast('Registro guardado en este navegador.')};
-function list(date){return meals.filter(m=>m.date===date).sort((a,b)=>(a.time||'').localeCompare(b.time||''))}
-function markup(items){if(!items.length)return '<div class="empty"><div class="emptyicon">＋</div><h4>Sin registros por ahora</h4><p>Agrega una comida para empezar a organizar esta fecha.</p><button class="primary addempty">＋ Agregar comida</button></div>';return '<div class="records">'+items.map(m=>'<div class="record"><div><strong>'+esc(m.food)+'</strong><small>'+esc(m.type)+(m.time?' · '+esc(m.time):'')+(m.drink?' · '+esc(m.drink):'')+(m.notes?' · '+esc(m.notes):'')+'</small></div><div style="display:flex;gap:7px;align-items:center"><span class="tag">'+esc(m.type)+'</span><button class="secondary del" data-id="'+m.id+'" title="Eliminar" style="padding:4px 9px">×</button></div></div>').join('')+'</div>'}
-function wire(root){root.querySelectorAll('.addempty').forEach(b=>b.onclick=open);root.querySelectorAll('.del').forEach(b=>b.onclick=()=>{if(confirm('¿Eliminar este registro?')){meals=meals.filter(m=>m.id!==b.dataset.id);save();toast('Registro eliminado.')}})}
-function calendar(){let y=cursor.getFullYear(),m=cursor.getMonth(),off=(new Date(y,m,1).getDay()+6)%7,total=new Date(y,m+1,0).getDate(),prev=new Date(y,m,0).getDate();$('#monthLabel').textContent=months[m][0].toUpperCase()+months[m].slice(1)+' '+y;let html='';for(let i=0;i<42;i++){let d,dt,dim=false;if(i<off){d=prev-off+i+1;dt=iso(new Date(y,m-1,d));dim=true}else if(i>=off+total){d=i-off-total+1;dt=iso(new Date(y,m+1,d));dim=true}else{d=i-off+1;dt=iso(new Date(y,m,d))}if(i>=off+total&&i>=35)continue;html+='<button class="day '+(dim?'dim ':'')+(dt===iso(now)?'today ':'')+(dt===selected?'selected ':'')+(meals.some(x=>x.date===dt)?'has':'')+'" data-date="'+dt+'">'+d+'</button>'}$('#days').innerHTML=html;$('#days').querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>{selected=b.dataset.date;cursor=new Date(+selected.slice(0,4),+selected.slice(5,7)-1,1);render()});$('#selectedLabel').textContent=pretty(selected);$('#selectedCount').textContent=list(selected).length+' registros'}
-$('#prev').onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1);calendar()};$('#next').onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);calendar()};
-function history(){let q=$('#search').value.toLowerCase(),type=$('#filter').value,arr=meals.filter(m=>(!q||[m.food,m.notes,m.drink,m.type,m.date].join(' ').toLowerCase().includes(q))&&(!type||m.type===type)).sort((a,b)=>b.date.localeCompare(a.date));$('#historyCount').textContent=arr.length+' registros';$('#historyRecords').innerHTML=markup(arr);wire($('#historyRecords'))}
-$('#search').oninput=history;$('#filter').onchange=history;
-function render(){let today=list(iso(now)),sel=list(selected),month=iso(now).slice(0,7);$('#statDays').textContent=String(new Set(meals.map(m=>m.date)).size).padStart(2,'0');$('#statMeals').textContent=String(meals.length).padStart(2,'0');$('#statMonth').textContent=String(meals.filter(m=>m.date.startsWith(month)).length).padStart(2,'0');$('#todayLabel').textContent=pretty(iso(now));$('#todayRecords').innerHTML=markup(today);wire($('#todayRecords'));$('#selectedRecords').innerHTML=markup(sel);wire($('#selectedRecords'));$('#formDateLabel').textContent=pretty(selected);$('#dayCount').textContent=sel.length;$('#progress').style.width=Math.min(100,sel.length*20)+'%';$('#exportMeals').textContent=String(meals.length).padStart(2,'0');$('#exportDays').textContent=String(new Set(meals.map(m=>m.date)).size).padStart(2,'0');calendar();history()}
-$('#download').onclick=()=>{if(!meals.length){toast('No hay registros para exportar todavía.');return}let rows=[['Fecha','Tipo de comida','Comida','Hora','Bebida','Notas'],...meals.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(m=>[m.date,m.type,m.food,m.time,m.drink,m.notes])];let csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='yexcel-registros.csv';a.click();URL.revokeObjectURL(url);toast('CSV descargado; puedes abrirlo en Excel.')};
+import {
+  MEAL_TYPES, MONTHS_ES, createId, escapeHTML, formatDateEs, formatMonthEs,
+  localISODate, parseISODate, sortMealsNewestFirst, uniqueDateCount
+} from "./utils.js";
+import { loadMeals, saveMeals, validateMeal } from "./storage.js";
+import { buildCsv, buildJsonBackup, downloadText, parseJsonBackup } from "./export.js";
+
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+const today = localISODate();
+let cursor = new Date();
+cursor = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+let selectedDate = today;
+let editingId = null;
+let returnFocus = null;
+let toastTimer = null;
+
+const loaded = loadMeals();
+let meals = loaded.ok ? loaded.meals : [];
+if (loaded.ok && loaded.migrated) {
+  const migrationSave = saveMeals(meals);
+  if (!migrationSave.ok) loaded.warning = migrationSave.error;
+}
+
+function toast(message, kind = "status") {
+  const node = $("#toast");
+  if (!node) return;
+  node.textContent = message;
+  node.classList.toggle("error", kind === "error");
+  node.setAttribute("role", kind === "error" ? "alert" : "status");
+  node.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => node.classList.remove("show"), 3600);
+}
+
+function persist(nextMeals, message = "Cambios guardados en este navegador.") {
+  const result = saveMeals(nextMeals);
+  if (!result.ok) {
+    toast(result.error, "error");
+    return false;
+  }
+  meals = result.meals;
+  render();
+  toast(message);
+  return true;
+}
+
+function openView(name) {
+  $$(".view").forEach((section) => {
+    section.classList.toggle("active", section.id === "view-" + name);
+  });
+  $$("[data-view]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === name);
+    if (button.dataset.view === name) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
+  const labels = {
+    inicio: ["Tu espacio personal", "Panel de control"],
+    registro: ["Organiza tus comidas", "Registro diario"],
+    historial: ["Todos tus datos", "Historial"],
+    exportar: ["Tus datos organizados", "Exportar a Excel"]
+  };
+  const label = labels[name] || labels.inicio;
+  $("#kicker").textContent = label[0];
+  $("#title").textContent = label[1];
+  render();
+  window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+
+$$("[data-view]").forEach((button) => button.addEventListener("click", () => openView(button.dataset.view)));
+$$("[data-goto]").forEach((button) => button.addEventListener("click", () => openView(button.dataset.goto)));
+
+function openForm(id = null) {
+  returnFocus = document.activeElement;
+  editingId = id;
+  const meal = meals.find((item) => item.id === id);
+  $("#form").reset();
+  $("#date").value = meal ? meal.date : selectedDate;
+  $("#type").value = meal ? meal.type : "Desayuno";
+  $("#food").value = meal ? meal.food : "";
+  $("#time").value = meal ? meal.time : "";
+  $("#drink").value = meal ? meal.drink : "";
+  $("#notes").value = meal ? meal.notes : "";
+  $(".modalhead h2").textContent = meal ? "Editar registro" : "Nuevo registro";
+  $("#submitMeal").textContent = meal ? "Guardar cambios" : "Guardar registro";
+  $("#modalback").classList.add("open");
+  $("#modalback").setAttribute("aria-hidden", "false");
+  setTimeout(() => $("#food").focus(), 30);
+}
+
+function closeForm() {
+  $("#modalback").classList.remove("open");
+  $("#modalback").setAttribute("aria-hidden", "true");
+  editingId = null;
+  if (returnFocus?.isConnected && typeof returnFocus.focus === "function") returnFocus.focus();
+  else $("#openForm")?.focus();
+}
+
+$("#addMain").addEventListener("click", () => openForm());
+$("#openForm").addEventListener("click", () => openForm());
+$("#close").addEventListener("click", closeForm);
+$("#cancel").addEventListener("click", closeForm);
+$("#modalback").addEventListener("click", (event) => {
+  if (event.target === $("#modalback")) closeForm();
+});
+document.addEventListener("keydown", (event) => {
+  if (!$("#modalback").classList.contains("open")) return;
+  if (event.key === "Escape") {
+    closeForm();
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const focusable = Array.from($("#form").querySelectorAll(
+    'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex="-1"])'
+  )).filter((element) => !element.hidden && element.offsetParent !== null);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
+
+$("#form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = {
+    id: editingId || createId(),
+    date: $("#date").value,
+    type: $("#type").value,
+    food: $("#food").value,
+    time: $("#time").value,
+    drink: $("#drink").value,
+    notes: $("#notes").value
+  };
+  const validation = validateMeal(input);
+  if (!validation.valid) {
+    toast(validation.error, "error");
+    return;
+  }
+  const next = editingId
+    ? meals.map((item) => item.id === editingId ? validation.meal : item)
+    : meals.concat(validation.meal);
+  selectedDate = validation.meal.date;
+  const date = parseISODate(selectedDate);
+  cursor = new Date(date.getFullYear(), date.getMonth(), 1);
+  if (persist(next, editingId ? "Registro actualizado." : "Registro guardado.")) {
+    closeForm();
+    openView("registro");
+  }
+});
+
+function recordsMarkup(items, dateForEmpty = selectedDate) {
+  if (!items.length) {
+    return '<div class="empty"><div class="emptyicon" aria-hidden="true">＋</div><h4>Sin registros por ahora</h4><p>Agrega una comida para empezar a organizar esta fecha.</p><button class="primary addempty" type="button" data-date="' + escapeHTML(dateForEmpty) + '">＋ Agregar comida</button></div>';
+  }
+  return '<div class="records">' + items.map((meal) => {
+    const meta = [meal.type, meal.time, meal.drink].filter(Boolean).map(escapeHTML).join(" · ");
+    const notes = meal.notes ? '<small class="record-note">' + escapeHTML(meal.notes) + '</small>' : "";
+    return '<article class="record"><div class="record-copy"><strong>' + escapeHTML(meal.food) +
+      '</strong><small>' + meta + '</small>' + notes + '</div><div class="record-actions">' +
+      '<span class="tag">' + escapeHTML(meal.type) + '</span>' +
+      '<button class="secondary edit" type="button" data-id="' + escapeHTML(meal.id) + '" aria-label="Editar ' + escapeHTML(meal.food) + '">Editar</button>' +
+      '<button class="secondary del" type="button" data-id="' + escapeHTML(meal.id) + '" aria-label="Eliminar ' + escapeHTML(meal.food) + '">×</button>' +
+      '</div></article>';
+  }).join("") + "</div>";
+}
+
+function wireRecordButtons(root) {
+  root.querySelectorAll(".addempty").forEach((button) => button.addEventListener("click", () => {
+    selectedDate = button.dataset.date || selectedDate;
+    const date = parseISODate(selectedDate);
+    if (date) cursor = new Date(date.getFullYear(), date.getMonth(), 1);
+    calendar();
+    $("#selectedLabel").textContent = formatDateEs(selectedDate);
+    $("#selectedCount").textContent = listForDate(selectedDate).length + " registros";
+    openForm();
+  }));
+  root.querySelectorAll(".edit").forEach((button) => button.addEventListener("click", () => openForm(button.dataset.id)));
+  root.querySelectorAll(".del").forEach((button) => button.addEventListener("click", () => {
+    const meal = meals.find((item) => item.id === button.dataset.id);
+    if (!meal || !window.confirm('¿Eliminar el registro "' + meal.food + '"?')) return;
+    persist(meals.filter((item) => item.id !== meal.id), "Registro eliminado.");
+  }));
+}
+
+function renderList(node, items, dateForEmpty = selectedDate) {
+  node.innerHTML = recordsMarkup(items, dateForEmpty);
+  wireRecordButtons(node);
+}
+
+function calendar() {
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const offset = (new Date(year, month, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const previousDays = new Date(year, month, 0).getDate();
+  $("#monthLabel").textContent = formatMonthEs(cursor);
+  const dayButtons = [];
+  for (let index = 0; index < 42; index += 1) {
+    let number;
+    let dateValue;
+    let dim = false;
+    if (index < offset) {
+      number = previousDays - offset + index + 1;
+      dateValue = localISODate(new Date(year, month - 1, number));
+      dim = true;
+    } else if (index >= offset + daysInMonth) {
+      number = index - offset - daysInMonth + 1;
+      dateValue = localISODate(new Date(year, month + 1, number));
+      dim = true;
+    } else {
+      number = index - offset + 1;
+      dateValue = localISODate(new Date(year, month, number));
+    }
+    const classes = ["day"];
+    if (dim) classes.push("dim");
+    if (dateValue === today) classes.push("today");
+    if (dateValue === selectedDate) classes.push("selected");
+    if (meals.some((item) => item.date === dateValue)) classes.push("has");
+    dayButtons.push('<button class="' + classes.join(" ") + '" type="button" data-date="' + dateValue +
+      '" aria-label="' + escapeHTML(formatDateEs(dateValue)) + '" aria-pressed="' + String(dateValue === selectedDate) + '">' +
+      number + '</button>');
+  }
+  $("#days").innerHTML = dayButtons.join("");
+  $("#days").querySelectorAll("[data-date]").forEach((button) => button.addEventListener("click", () => {
+    selectedDate = button.dataset.date;
+    const date = parseISODate(selectedDate);
+    cursor = new Date(date.getFullYear(), date.getMonth(), 1);
+    render();
+  }));
+  $("#selectedLabel").textContent = formatDateEs(selectedDate);
+  $("#selectedCount").textContent = listForDate(selectedDate).length + " registros";
+}
+
+function listForDate(date) {
+  return meals.filter((meal) => meal.date === date).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+}
+
+function renderHistory() {
+  const query = $("#search").value.trim().toLocaleLowerCase("es-MX");
+  const type = $("#filter").value;
+  const from = $("#fromDate")?.value || "";
+  const to = $("#toDate")?.value || "";
+  const invalidRange = Boolean(from && to && from > to);
+  $("#fromDate")?.setAttribute("aria-invalid", String(invalidRange));
+  $("#toDate")?.setAttribute("aria-invalid", String(invalidRange));
+  const filtered = sortMealsNewestFirst(meals).filter((meal) => {
+    if (invalidRange) return false;
+    const searchable = [meal.food, meal.notes, meal.drink, meal.type, meal.date].join(" ").toLocaleLowerCase("es-MX");
+    return (!query || searchable.includes(query)) &&
+      (!type || meal.type === type) && (!from || meal.date >= from) && (!to || meal.date <= to);
+  });
+  $("#historyCount").textContent = invalidRange ? "Rango de fechas inválido" : filtered.length + " registros";
+  renderList($("#historyRecords"), filtered);
+}
+
+$("#search").addEventListener("input", renderHistory);
+$("#filter").addEventListener("change", renderHistory);
+$("#fromDate")?.addEventListener("change", renderHistory);
+$("#toDate")?.addEventListener("change", renderHistory);
+
+$("#clearFilters")?.addEventListener("click", () => {
+  $("#search").value = "";
+  $("#filter").value = "";
+  if ($("#fromDate")) $("#fromDate").value = "";
+  if ($("#toDate")) $("#toDate").value = "";
+  renderHistory();
+  toast("Filtros limpiados.");
+});
+$("#prev").addEventListener("click", () => {
+  cursor = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1);
+  calendar();
+});
+$("#next").addEventListener("click", () => {
+  cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+  calendar();
+});
+
+$("#download").addEventListener("click", () => {
+  if (!meals.length) {
+    toast("No hay registros para exportar todavía.", "error");
+    return;
+  }
+  try {
+    downloadText("yexcel-registros.csv", buildCsv(meals), "text/csv;charset=utf-8");
+    toast("CSV descargado; puedes abrirlo en Excel.");
+  } catch (error) {
+    toast(error.message || "No se pudo crear el CSV.", "error");
+  }
+});
+
+$("#downloadBackup")?.addEventListener("click", () => {
+  if (!meals.length) {
+    toast("No hay registros para respaldar todavía.", "error");
+    return;
+  }
+  try {
+    downloadText("yexcel-respaldo.json", buildJsonBackup(meals), "application/json;charset=utf-8");
+    toast("Respaldo JSON descargado. Guárdalo en un lugar privado.");
+  } catch (error) {
+    toast(error.message || "No se pudo crear el respaldo.", "error");
+  }
+});
+
+$("#importBackup")?.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) return;
+  if (file.size > 2_000_000) {
+    toast("El respaldo supera el límite de 2 MB.", "error");
+    return;
+  }
+  try {
+    const parsed = parseJsonBackup(await file.text());
+    if (!parsed.valid) {
+      toast(parsed.error, "error");
+      return;
+    }
+    const prompt = "Se reemplazarán los " + meals.length + " registros actuales por " +
+      parsed.meals.length + " registros del respaldo. ¿Continuar?";
+    if (!window.confirm(prompt)) return;
+    if (persist(parsed.meals, "Respaldo restaurado.")) {
+      selectedDate = parsed.meals[0]?.date || today;
+      const date = parseISODate(selectedDate);
+      cursor = new Date(date.getFullYear(), date.getMonth(), 1);
+      render();
+      if (parsed.warning) toast(parsed.warning);
+    }
+  } catch {
+    toast("No se pudo leer el archivo de respaldo.", "error");
+  }
+});
+
+function render() {
+  const todaysMeals = listForDate(today);
+  const selectedMeals = listForDate(selectedDate);
+  const monthPrefix = today.slice(0, 7);
+  $("#statDays").textContent = String(uniqueDateCount(meals)).padStart(2, "0");
+  $("#statMeals").textContent = String(meals.length).padStart(2, "0");
+  $("#statMonth").textContent = String(meals.filter((meal) => meal.date.startsWith(monthPrefix)).length).padStart(2, "0");
+  $("#todayLabel").textContent = formatDateEs(today);
+  renderList($("#todayRecords"), todaysMeals, today);
+  renderList($("#selectedRecords"), selectedMeals, selectedDate);
+  $("#formDateLabel").textContent = formatDateEs(selectedDate);
+  $("#dayCount").textContent = String(selectedMeals.length);
+  $("#progress").style.width = Math.min(100, selectedMeals.length * 20) + "%";
+  $("#exportMeals").textContent = String(meals.length).padStart(2, "0");
+  $("#exportDays").textContent = String(uniqueDateCount(meals)).padStart(2, "0");
+  calendar();
+  renderHistory();
+}
+
+if (!loaded.ok) toast(loaded.error + " No se mostraron los registros dañados.", "error");
+else if (loaded.warning) toast(loaded.warning, "error");
 render();
