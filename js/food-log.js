@@ -74,10 +74,14 @@ CATEGORIES.splice(0,CATEGORIES.length,...CATALOG.map(({id,label})=>({id,label}))
 function categoryMarkup(category, items = []) {
   const defaults = CATALOG.find(c => c.id === category.id)?.items || [];
   const saved = new Map(items.map(item => [String(item.description || "").toLocaleLowerCase("es-MX"), item]));
-  const rows = defaults.map(([description,unit]) => ({
-    category:category.id, description, unit,
-    quantity:saved.get(description.toLocaleLowerCase("es-MX"))?.quantity ?? ""
-  }));
+  const rows = defaults.map(([description,unit]) => {
+    const savedItem = saved.get(description.toLocaleLowerCase("es-MX"));
+    return {
+      category:category.id, description, unit,
+      quantity:savedItem?.quantity ?? "",
+      recognitionStatus:savedItem?.recognitionStatus || ""
+    };
+  });
   // Conserva insumos antiguos si ya había registros con productos fuera del catálogo fijo.
   items.filter(item => !defaults.some(([name]) => name.toLocaleLowerCase("es-MX") === String(item.description || "").toLocaleLowerCase("es-MX")))
     .forEach(item => rows.push(item));
@@ -90,9 +94,10 @@ function categoryMarkup(category, items = []) {
 function lineMarkup(item = {}) {
   const description = item.description || "";
   const unit = item.unit || "";
-  return `<div class="line-row paper-row">
+  const unrecognized = item.recognitionStatus === "unrecognized";
+  return `<div class="line-row paper-row ${unrecognized ? "needs-review" : ""}" ${unrecognized ? 'data-recognition-status="unrecognized"' : ""}>
     <div class="line-description" title="${escapeHTML(description)}">${escapeHTML(description)}</div>
-    <label class="quantity-cell"><span class="mobile-only">Cantidad</span><input class="line-quantity" type="number" min="0" max="100000000" step="any" value="${item.quantity ?? ""}" placeholder="—" aria-label="Cantidad de ${escapeHTML(description || "insumo")}"></label>
+    <label class="quantity-cell"><span class="mobile-only">Cantidad</span><input class="line-quantity" type="number" min="0" max="100000000" step="any" value="${item.quantity ?? ""}" placeholder="${unrecognized ? "No se reconoció el número" : "—"}" aria-label="Cantidad de ${escapeHTML(description || "insumo")}" ${unrecognized ? 'title="El OCR detectó el insumo, pero no pudo leer la cantidad"' : ""}></label>
     <div class="line-unit" aria-label="Unidad de medida">${escapeHTML(unit || "—")}</div>
   </div>`;
 }
@@ -107,20 +112,21 @@ function clearForm() {
 }
 function getFormData() {
   const items = [];
-  $$(".item-group").forEach(group => {
-    $$(".line-row", group).forEach(row => {
+  const unrecognizedItems = [];
+  $(".item-group").forEach(group => {
+    $(".line-row", group).forEach(row => {
       const description = $(".line-description", row).textContent.trim();
       const quantityRaw = $(".line-quantity", row).value;
       const unitText = $(".line-unit", row).textContent.trim();
       const unit = unitText === "—" ? "" : unitText;
-      if (quantityRaw === "") return;
       if (!description && !unit) return;
-      items.push({
-        category: group.dataset.category,
-        description,
-        quantity: numberValue(quantityRaw),
-        unit
-      });
+      if (quantityRaw === "") {
+        if (row.dataset.recognitionStatus === "unrecognized") {
+          unrecognizedItems.push({ category: group.dataset.category, description, quantity: "", unit, recognitionStatus: "unrecognized" });
+        }
+        return;
+      }
+      items.push({ category: group.dataset.category, description, quantity: numberValue(quantityRaw), unit });
     });
   });
   return {
@@ -133,7 +139,8 @@ function getFormData() {
     menu: $("#menu").value.trim(),
     water: $("#water").value.trim(),
     fruit: $("#fruit").value.trim(),
-    items
+    items,
+    unrecognizedItems
   };
 }
 function validate(log) {
@@ -159,7 +166,7 @@ function editLog(id) {
   $("#menu").value = log.menu || "";
   $("#water").value = log.water || "";
   $("#fruit").value = log.fruit || "";
-  $("#itemGroups").innerHTML = CATEGORIES.map(category => categoryMarkup(category, log.items.filter(item => item.category === category.id))).join("");
+  $("#itemGroups").innerHTML = CATEGORIES.map(category => categoryMarkup(category, [...log.items, ...(log.unrecognizedItems || [])].filter(item => item.category === category.id))).join("");
   $("#formHeading").textContent = `Editar registro · ${dateLabel(log.date)}`;
   $("#saveLog").textContent = "Guardar cambios";
   $("#date").scrollIntoView({ behavior:"smooth", block:"center" });
@@ -197,7 +204,7 @@ function render() {
   renderInventoryTotals();
   $("#recordsList").innerHTML = filtered.length ? filtered.map(log => `
     <article class="record-card">
-      <div class="record-date"><span>${escapeHTML(dateLabel(log.date))}</span><strong>${escapeHTML(log.center || "Centro sin nombre")}</strong><small>${log.items.length} insumos · ${escapeHTML(log.cook || "Sin encargado")}</small></div>
+      <div class="record-date"><span>${escapeHTML(dateLabel(log.date))}</span><strong>${escapeHTML(log.center || "Centro sin nombre")}</strong><small>${log.items.length} insumos · ${escapeHTML(log.cook || "Sin encargado")}${log.unrecognizedItems?.length ? " · " + log.unrecognizedItems.length + " por revisar" : ""}</small></div>
       <div class="record-menu"><span class="eyebrow">MENÚ</span><p>${escapeHTML(log.menu || "Sin menú registrado")}</p><small>Desayunos: ${log.breakfasts === "" ? "—" : escapeHTML(log.breakfasts)} · Comidas: ${log.mealsServed === "" ? "—" : escapeHTML(log.mealsServed)}</small></div>
       <div class="record-actions"><button class="button secondary edit-log" data-id="${escapeHTML(log.id)}">Editar</button><button class="button danger delete-log" data-id="${escapeHTML(log.id)}">Eliminar</button></div>
     </article>`).join("") : '<div class="empty"><h3>No hay registros que mostrar</h3><p>Agrega un registro o cambia los filtros.</p></div>';
@@ -334,7 +341,8 @@ async function importSelectedPdf(file) {
         menu: fields.menu || "",
         water: fields.water || "",
         fruit: fields.fruit || "",
-        items: record.items.map(item => ({ ...item }))
+        items: record.items.map(item => ({ ...item })),
+        unrecognizedItems: (record.unrecognizedItems || []).map(item => ({ ...item }))
       };
     });
     if (!importedLogs.length) {
